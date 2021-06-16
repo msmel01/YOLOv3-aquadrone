@@ -14,3 +14,9 @@
     #include "opencv2/highgui/highgui_c.h"
     ```
     * changing the line `IplImage ipl = m;` to `IplImage ipl = cvIplImage(m);`
+## Data Collection
+* Videos for training can be found on the Aquadrone google drive.
+* The Timestamps folder contains csv files that contain start and end times as well as labels for objects that appear in the videos.
+* The timestamps are used by the `Data Collection/split_video.py` (from the original aquadrone-vision repo) to produce images of objects from the videos that can be used to train the neural network.
+<!--gate1, gate2, gate3 videos are from ARVP 2019-->
+## Data Annotation

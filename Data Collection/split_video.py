@@ -2,9 +2,9 @@
 #   Purpose: Break video files into seperate frames and label it
 #   Note: This combines both the video_frames.py and the label_frames.py scripts
 # Command Line Input:
-#   python video_frames.py  --directory <directory path to store frames> --video <path to video file> --file <path to timestamp file>
+#   python split_video.py  --directory <directory path to store frames> --video <path to video file> --file <path to timestamp file>
 #   EXAMPLE:
-#   python video_frames.py --directory ./underwater-video3-frames --video ./underwater_footage/video1.mp4 --file ./test.csv
+#   python split_video.py --directory ./underwater-video3-frames --video ./underwater_footage/video1.mp4 --file ./test.csv
 # Optional Arguments:
 #   --compress: optionally compress image after saving
 
@@ -74,7 +74,6 @@ def FrameCapture(path, directory, file_path, compress):
 
     while(vidObj.isOpened() and count < vidObj_length):
         success, image = vidObj.read()
-
         # Filter array of labels to get correct frame label
         label = list(filter(lambda x: count >= x[0] and count <= x[1], labels))
 

@@ -12,6 +12,7 @@ import cv2
 import os
 import argparse
 from PIL import Image
+import math
 
 def getFrame(time, framerate):
     '''
@@ -38,7 +39,7 @@ def compressImage(path):
     image.save(path, optimize=True, quality=70)
     print('Compressing...{} --> {}'.format(path, os.path.getsize(path)))
 
-def FrameCapture(path, directory, file_path, compress):
+def FrameCapture(path, directory, file_path, compress, num_frames):
     '''
     A function to capture the frames of a given video, and save each one to folders
     according to the 'category' of the object in the frame, denoted in a given file
@@ -47,6 +48,7 @@ def FrameCapture(path, directory, file_path, compress):
         directory: the path to the directory in which to save the frames
         file_path: the path to the timestamps file which contains the object classifications
         compress: boolean value of whether or not to compress the video
+        num_frames: specify the number of frames per second to save
     outputs:
         none
     side_effects:
@@ -58,6 +60,11 @@ def FrameCapture(path, directory, file_path, compress):
     vidObj_framerate = vidObj.get(cv2.CAP_PROP_FPS)
     print("# of Frames: {}".format(vidObj_length))
     print("FPS: {}".format(vidObj_framerate))
+
+    if num_frames and num_frames > vidObj_framerate:
+        num_frames = vidObj_framerate
+    elif num_frames == 0:
+        return
 
     padding = len(str(vidObj_length))
     count = 0
@@ -72,19 +79,39 @@ def FrameCapture(path, directory, file_path, compress):
         labels.append([start, end, line[2]])
     labels.sort()
 
+    period = (1 / vidObj_framerate)*1000 # 'duration' a frame is presented in the video scaled by a 1000
+    time_count = 0
+    fps = round(vidObj_framerate)
+
     while(vidObj.isOpened() and count < vidObj_length):
+        
+        # at the start of every "second", randomly generate num_frames number of integers ranging from
+        # 0 to 23 (for 0th second) and 1 to 24 (otherwise).
+        # these integers are sorted and every time an integer*period is equal to the time of an image,
+        # the image is saved and next iteration, the next entry in this array of integers is checked.
+        
         success, image = vidObj.read()
+        time = vidObj.get(cv2.CAP_PROP_POS_MSEC) # in milliseconds
+
         # Filter array of labels to get correct frame label
         label = list(filter(lambda x: count >= x[0] and count <= x[1], labels))
 
+        sec_elapsed = math.floor(time_count)
+        
+        if success and math.isclose(time_count, time, rel_tol=1e1):
+            print(time)
+
         if (len(label) > 0 and success):
-            subdirectory = directory + '/{}'.format(label[0][2])
-            if not os.path.exists(subdirectory): os.makedirs(subdirectory)
-            name = subdirectory + '/{}.jpg'.format(str(count).rjust(padding,'0'))
-            cv2.imwrite(name, image)
-            print('Creating...{} -> {}'.format(name,success))
-            if compress: compressImage(name)
+
+            # subdirectory = directory + '/{}'.format(label[0][2])
+            # if not os.path.exists(subdirectory): os.makedirs(subdirectory)
+            # name = subdirectory + '/{}.jpg'.format(str(count).rjust(padding,'0'))
+            # cv2.imwrite(name, image)
+            # print('Creating...{} -> {}'.format(name,success))
+            # if compress: compressImage(name)
+            pass
         count += 1
+        time_count += period
 
 if __name__ == '__main__':
     # Construct the argument parser
@@ -98,12 +125,13 @@ if __name__ == '__main__':
         help="path to the text file containing timestamps for objects in video")
     ap.add_argument("-c", "--compress", action="store_true",
         help="compress images before saving")
+    ap.add_argument("-n", "--numframes", help="save a specific number of frames per second")
     args = vars(ap.parse_args())
 
     try:
         if (not os.path.exists(args["directory"])):
             os.makedirs(args["directory"])
-        FrameCapture(args["video"], args["directory"], args["file"], args["compress"])
+        FrameCapture(args["video"], args["directory"], args["file"], args["compress"], args["numframes"])
     except Exception as e:
         print("ERROR: ", str(e))
     else:

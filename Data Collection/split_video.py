@@ -7,12 +7,16 @@
 #   python split_video.py --directory ./underwater-video3-frames --video ./underwater_footage/video1.mp4 --file ./test.csv
 # Optional Arguments:
 #   --compress: optionally compress image after saving
+#   --numframes: specify the number of frames to save per second
 
 import cv2
 import os
 import argparse
 from PIL import Image
 import math
+import random
+import numpy as np
+from numpy import savez_compressed
 
 def getFrame(time, framerate):
     '''
@@ -58,14 +62,16 @@ def FrameCapture(path, directory, file_path, compress, num_frames):
     vidObj = cv2.VideoCapture(path)
     vidObj_length = int(vidObj.get(cv2.CAP_PROP_FRAME_COUNT))
     vidObj_framerate = vidObj.get(cv2.CAP_PROP_FPS)
+    vidObj_duration = vidObj_length / vidObj_framerate
     print("# of Frames: {}".format(vidObj_length))
     print("FPS: {}".format(vidObj_framerate))
+    print("Duration: {} secs".format(vidObj_duration))
 
-    if num_frames and num_frames > vidObj_framerate:
+    if not num_frames or int(num_frames) > vidObj_framerate:
         num_frames = vidObj_framerate
-    elif num_frames == 0:
+    elif int(num_frames) <= 0:
         return
-
+    
     padding = len(str(vidObj_length))
     count = 0
 
@@ -79,39 +85,95 @@ def FrameCapture(path, directory, file_path, compress, num_frames):
         labels.append([start, end, line[2]])
     labels.sort()
 
-    period = (1 / vidObj_framerate)*1000 # 'duration' a frame is presented in the video scaled by a 1000
-    time_count = 0
-    fps = round(vidObj_framerate)
+    # period = (1 / vidObj_framerate)*1000 # 'duration' a frame is presented in the video scaled by a 1000
+    #curr_frame = 0
+    #first_frame = True
+    #curr_lower = 0
+    #fps = round(vidObj_framerate)
 
-    while(vidObj.isOpened() and count < vidObj_length):
-        
-        # at the start of every "second", randomly generate num_frames number of integers ranging from
-        # 0 to 23 (for 0th second) and 1 to 24 (otherwise).
-        # these integers are sorted and every time an integer*period is equal to the time of an image,
-        # the image is saved and next iteration, the next entry in this array of integers is checked.
-        
+    frame_list_index = 0
+    frame_list = []
+    full_frame_list = []
+
+    while (vidObj.isOpened() and count < vidObj_length):
+
         success, image = vidObj.read()
         time = vidObj.get(cv2.CAP_PROP_POS_MSEC) # in milliseconds
 
-        # Filter array of labels to get correct frame label
         label = list(filter(lambda x: count >= x[0] and count <= x[1], labels))
 
-        sec_elapsed = math.floor(time_count)
-        
-        if success and math.isclose(time_count, time, rel_tol=1e1):
-            print(time)
+        sec_elapsed = math.floor(time / 1000)
+
+        if frame_list_index < sec_elapsed:
+            full_frame_list.append(frame_list)
+            frame_list = []
+            frame_list_index = sec_elapsed
 
         if (len(label) > 0 and success):
+            frame_list.append(image)
 
-            # subdirectory = directory + '/{}'.format(label[0][2])
-            # if not os.path.exists(subdirectory): os.makedirs(subdirectory)
-            # name = subdirectory + '/{}.jpg'.format(str(count).rjust(padding,'0'))
-            # cv2.imwrite(name, image)
-            # print('Creating...{} -> {}'.format(name,success))
-            # if compress: compressImage(name)
-            pass
         count += 1
-        time_count += period
+    ##############################################################################################
+    for frame_set in full_frame_list:
+        if (len(frame_set) <= int(num_frames)):
+            for frame in frame_set:
+                print("!!")
+        else:
+            
+    # while(vidObj.isOpened() and count < vidObj_length):
+        
+    #     success, image = vidObj.read()
+    #     time = vidObj.get(cv2.CAP_PROP_POS_MSEC) # in milliseconds
+
+    #     
+
+    #     # at the start of every "second", randomly generate num_frames number of integers ranging from
+    #     # 0 to fps - 1 (for 0th second) and 1 to fps (otherwise).
+    #     # these integers are sorted and every time an integer*period is equal to the time of an image,
+    #     # the image is saved and next iteration, the next entry in this array of integers is checked.
+
+        
+    #     # Filter array of labels to get correct frame label
+    #     label = list(filter(lambda x: count >= x[0] and count <= x[1], labels))
+
+    #     if curr_lower < sec_elapsed:
+    #         curr_frame = 0
+    #         first_frame = True
+    #         curr_lower = sec_elapsed
+    #         #print('----------------------------------------')
+    #         #print('seconds elapsed is {}'.format(sec_elapsed))
+
+    #     if first_frame:
+    #         # if sec_elapsed == 0:
+    #         #     random_frames = random.sample(range(0, fps), int(num_frames))
+    #         # else:
+            
+    #         random_frames = random.sample(range(0, fps), int(num_frames))
+    #         first_frame = False
+    #         random_frames = sorted(random_frames)
+    #         # print(random_frames)
+    #         #random_frames = [period*i for i in random_frames]
+    #         # print(random_frames)
+        
+
+    #     if (len(label) > 0 and success 
+    #     #and (count == sec_elapsed*fps + random_frames[curr_frame])
+    #     #and math.isclose(random_frames[curr_frame], time, rel_tol=1e1)
+    #         ):
+    #         print(count)
+    #         curr_frame += 1
+    #         # print(time)
+    #         # subdirectory = directory + '/{}'.format(label[0][2])
+    #         # if not os.path.exists(subdirectory): os.makedirs(subdirectory)
+    #         # name = subdirectory + '/{}.jpg'.format(str(count).rjust(padding,'0'))
+    #         # cv2.imwrite(name, image)
+    #         # print('Creating...{} -> {}'.format(name,success))
+    #         # if compress: compressImage(name)
+    #     # elif (len(label) > 0 and (count == sec_elapsed*fps + random_frames[curr_frame])):
+    #     #     #print("failed count is {}".format(count))
+    #     #     pass
+    #     count += 1
+    #     # time_count += period
 
 if __name__ == '__main__':
     # Construct the argument parser

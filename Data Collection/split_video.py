@@ -7,7 +7,9 @@
 #   python split_video.py --directory ./underwater-video3-frames --video ./underwater_footage/video1.mp4 --file ./test.csv
 # Optional Arguments:
 #   --compress: optionally compress image after saving
-#   --numframes: specify the number of frames to save per second
+#   --numframes or -n: specify the number of frames that will be randomly selected and saved per second
+# Notes:
+#   It is possible that fewer frames than numframes is actually successfully saved and read by opencv.
 
 import cv2
 import os
@@ -15,7 +17,6 @@ import argparse
 from PIL import Image
 import math
 import random
-import numpy as np
 
 def getFrame(time, framerate):
     '''

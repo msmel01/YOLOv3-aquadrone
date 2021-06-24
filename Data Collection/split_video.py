@@ -43,7 +43,7 @@ def compressImage(path):
     image.save(path, optimize=True, quality=70)
     print('Compressing...{} --> {}'.format(path, os.path.getsize(path)))
 
-def FrameCapture(path, directory, file_path, compress, num_frames):
+def frameCapture(path, directory, file_path, compress, num_frames):
     '''
     A function to capture the frames of a given video, and save each one to folders
     according to the 'category' of the object in the frame, denoted in a given file
@@ -158,7 +158,7 @@ if __name__ == '__main__':
     try:
         if (not os.path.exists(args["directory"])):
             os.makedirs(args["directory"])
-        FrameCapture(args["video"], args["directory"], args["file"], args["compress"], args["numframes"])
+        frameCapture(args["video"], args["directory"], args["file"], args["compress"], args["numframes"])
     except Exception as e:
         print("ERROR: ", str(e))
     else:

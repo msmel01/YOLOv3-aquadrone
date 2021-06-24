@@ -35,4 +35,4 @@ Before training, images must be annotated with the following information in a co
 
 [Yolo_mark](https://github.com/AlexeyAB/Yolo_mark) and [LabelImg](https://github.com/tzutalin/labelImg) are two good options.
 ## Data Augmentation
-<!--Use albumentations-->
+The [Albumentations](https://albumentations.ai/) library is used; demoes of data augmentation techniques can be found [here](https://albumentations-demo.herokuapp.com/).

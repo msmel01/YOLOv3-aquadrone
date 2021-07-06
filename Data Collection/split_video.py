@@ -63,6 +63,7 @@ def frameCapture(path, directory, file_path, compress, num_frames):
     vidObj_length = int(vidObj.get(cv2.CAP_PROP_FRAME_COUNT))
     vidObj_framerate = vidObj.get(cv2.CAP_PROP_FPS)
     vidObj_duration = vidObj_length / vidObj_framerate
+    file_name = os.path.splitext(os.path.basename(file_path))[0]
     print("# of Frames: {}".format(vidObj_length))
     print("FPS: {}".format(vidObj_framerate))
     print("Duration: {} secs".format(vidObj_duration))
@@ -130,7 +131,7 @@ def frameCapture(path, directory, file_path, compress, num_frames):
 
         for findex in random_frames:
             label = full_label_list[index_sec][findex]
-            subdirectory = directory + '/{}'.format(label[0][2])
+            subdirectory = directory + '/{}-{}'.format(label[0][2], file_name)
             if not os.path.exists(subdirectory): os.makedirs(subdirectory)
             name = subdirectory + '/{}.jpg'.format(str(count).rjust(padding,'0'))
             cv2.imwrite(name, frame_set[findex])

@@ -8,6 +8,7 @@ import os.path
 # add support for bounding boxes
 # find a way to randomly sample images for data augmentation
 # combinations of data augmentation techniques
+# implement a GUI
 
 def horizontalFlip(image, name, dirname):
     transform = A.Compose([A.HorizontalFlip(p=1.0)])
@@ -52,6 +53,13 @@ def crop(image, name, dirname):
     transform = A.Compose([A.Crop(always_apply=False, p=1.0, x_min=0, y_min=0, x_max=160, y_max=106)])
     aug_image = transform(image=image)['image']
     img_name = dirname + '/{}_crop.jpg'.format(name)
+    cv2.imwrite(img_name, aug_image)
+
+
+def rgbShift(image, name, dirname):
+    transform = A.RGBShift(always_apply=False, p=1.0, r_shift_limit=(-20, 20), g_shift_limit=(-20, 20), b_shift_limit=(-20, 20)) 
+    aug_image = transform(image=image)['image']
+    img_name = dirname + '/{}_rgb.jpg'.format(name)
     cv2.imwrite(img_name, aug_image)
 
 

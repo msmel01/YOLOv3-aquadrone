@@ -133,7 +133,7 @@ def frameCapture(path, directory, file_path, compress, num_frames):
             label = full_label_list[index_sec][findex]
             subdirectory = directory + '/{}-{}'.format(label[0][2], file_name)
             if not os.path.exists(subdirectory): os.makedirs(subdirectory)
-            name = subdirectory + '/{}.jpg'.format(str(count).rjust(padding,'0'))
+            name = subdirectory + '/{}-{}.jpg'.format(label[0][2], str(count).rjust(padding,'0'))
             cv2.imwrite(name, frame_set[findex])
             print('Creating...{} -> {}'.format(name,success))
             if compress: compressImage(name)

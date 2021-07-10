@@ -1,17 +1,19 @@
 from PyQt5 import QtWidgets, QtCore, QtGui
-from PyQt5.QtWidgets import QApplication, QMainWindow, QMessageBox
+from PyQt5.QtWidgets import QApplication, QMainWindow, QMessageBox, QWidget
 import sys
+import aug_classes as ac 
 
-class PipelineWindow(QMainWindow):
+class PipelineWindow(QWidget):
     def __init__(self, default_name, parent):
-        super(QMainWindow, self).__init__()
+        super(QWidget, self).__init__()
         self.default_name = default_name
         self.name = self.default_name
-        self.aug_objects = []
+        self.prev_aug = -1
+        self.aug_objects = [None] * 7
         self.aug_names = ['Horizontal Flip', 'Motion Blur', 'ISO Noise', 'Rotate',
                             'Cutout', 'Crop', 'RGB Shift']
         parentTopLeft = parent.geometry().topLeft()
-        self.setGeometry(parentTopLeft.x() + 100, parentTopLeft.y() + 100, 600, 150)
+        self.setGeometry(parentTopLeft.x() + 100, parentTopLeft.y() + 100, 600, 350)
         self.setWindowTitle('Pipeline configuration window')
         self.setupUi()
 
@@ -34,7 +36,7 @@ class PipelineWindow(QMainWindow):
         self.aug_combo_box.setGeometry(20, 60, 480, 30)
         for aug in self.aug_names:
             self.aug_combo_box.addItem(aug)
-        # self.aug_combo_box.activated.connect(lambda: self.showParams(self.aug_combo_box.currentIndex()))
+        self.aug_combo_box.activated.connect(self.updateUi)
         # add button
         self.add_aug_img = QtGui.QPixmap('plus.png')
         self.add_aug_icon = QtGui.QIcon(self.add_aug_img)
@@ -50,8 +52,8 @@ class PipelineWindow(QMainWindow):
         self.rmv_aug_button.setGeometry(550, 58, 35, 35)
         self.rmv_aug_button.setIcon(self.rmv_aug_icon)
         self.rmv_aug_button.setIconSize(QtCore.QSize(25,25))
-        self.add_aug_button.clicked.connect(self.removeAug)
-
+        self.rmv_aug_button.clicked.connect(self.removeAug)
+        
 
     def updateName(self, new_name):
         self.name = new_name
@@ -59,12 +61,239 @@ class PipelineWindow(QMainWindow):
             self.name = self.default_name
 
 
+    def updateUi(self): # updates UI by 
+        selected_aug = self.aug_combo_box.currentIndex()
+
+        if self.prev_aug == 0: self.hf_param_form.setVisible(False)
+        elif self.prev_aug == 1: self.mb_param_form.setVisible(False) 
+        elif selected_aug == 2: # iso noise
+            pass
+        elif selected_aug == 3: # rotate
+            pass
+        elif selected_aug == 4: # cutout
+            pass
+        elif selected_aug == 5: # crop
+            pass
+        else: # rgb shift
+            pass
+        #######################################
+        if self.aug_objects[selected_aug] == None:
+            self.add_aug_button.setEnabled(True)
+            return
+        else:
+            self.add_aug_button.setEnabled(False)
+        ########################################
+
+        if selected_aug == 0: # horizontal flip
+            self.hf_param_form.setVisible(True)
+            self.hf_prob_box.setValue(ac.HorizontalFlipParams().p)
+
+        elif selected_aug == 1: # motion blur
+            self.mb_param_form.setVisible(True)
+            mb = ac.MotionBlurParams()
+            self.mb_true_box.setChecked(mb.always_apply)
+            self.mb_prob_box.setValue(mb.p)
+            self.mb_blur_upper_box.setValue(mb.blur_limit[1])
+            self.mb_blur_lower_box.setValue(mb.blur_limit[0])
+
+        elif selected_aug == 2: # iso noise
+            pass
+        elif selected_aug == 3: # rotate
+            pass
+        elif selected_aug == 4: # cutout
+            pass
+        elif selected_aug == 5: # crop
+            pass
+        else: # rgb shift
+            pass
+
+        self.prev_aug = selected_aug
+
+
     def addAug(self):
-        pass
+        # self.aug_combo_box.activated.connect(lambda: self.showParams())
+        selected_aug = self.aug_combo_box.currentIndex()
+        self.aug_objects[selected_aug] = 1
+        self.prev_aug = selected_aug
+
+        if selected_aug == 0: # horizontal flip
+            self.setupHorFlipView()
+
+        elif selected_aug == 1: # motion blur
+            self.setupMotionBlurView()
+
+        elif selected_aug == 2: # iso noise
+            self.setupIsoNoiseView()
+
+        elif selected_aug == 3: # rotate
+            pass
+        elif selected_aug == 4: # cutout
+            pass
+        elif selected_aug == 5: # crop
+            pass
+        else: # rgb shift
+            pass        
+
+        self.add_aug_button.setEnabled(False)
 
 
     def removeAug(self):
+        selected_aug = self.aug_combo_box.currentIndex()
+        self.aug_objects[selected_aug] = None
+        self.add_aug_button.setEnabled(True)
+
+
+    def setupHorFlipView(self):
+        self.hf_param_form = QtWidgets.QWidget(self)
+        self.hf_param_form.setGeometry(QtCore.QRect(20, 110, 300, 200))
+
+        self.hf_param_form_layout = QtWidgets.QFormLayout(self.hf_param_form)
+        self.hf_param_form_layout.setContentsMargins(0, 0, 0, 0)
+
+        self.hf_prob_label = QtWidgets.QLabel(self.hf_param_form)
+        self.hf_prob_label.setText('Probability (unit interval): ')
+        self.hf_param_form_layout.setWidget(1, QtWidgets.QFormLayout.LabelRole, self.hf_prob_label)
+        self.hf_prob_box = QtWidgets.QDoubleSpinBox(self.hf_param_form)
+        self.hf_prob_box.setMaximum(1.0)
+        self.hf_prob_box.setSingleStep(0.01)
+        self.hf_prob_box.setValue(ac.HorizontalFlipParams().p)
+
+        self.hf_param_form_layout.setWidget(1, QtWidgets.QFormLayout.FieldRole, self.hf_prob_box)
+        self.hf_param_form.setVisible(True)
+
+
+    def setupMotionBlurView(self):
+        mb = ac.MotionBlurParams()
+            
+        self.mb_param_form = QtWidgets.QWidget(self)
+        self.mb_param_form.setGeometry(QtCore.QRect(20, 110, 300, 200))
+
+        self.mb_param_form_layout = QtWidgets.QFormLayout(self.mb_param_form)
+        self.mb_param_form_layout.setContentsMargins(0, 0, 0, 0)
+
+        self.mb_true_box_label = QtWidgets.QLabel(self.mb_param_form)
+        self.mb_true_box_label.setText('Always Apply:')
+        self.mb_param_form_layout.setWidget(0, QtWidgets.QFormLayout.LabelRole, self.mb_true_box_label)
+        self.mb_true_box = QtWidgets.QCheckBox(self.mb_param_form)
+        self.mb_true_box.setChecked(mb.always_apply)
+        self.mb_param_form_layout.setWidget(0, QtWidgets.QFormLayout.FieldRole, self.mb_true_box)
+
+        self.mb_prob_label = QtWidgets.QLabel(self.mb_param_form)
+        self.mb_prob_label.setText('Probability (unit interval): ')
+        self.mb_param_form_layout.setWidget(1, QtWidgets.QFormLayout.LabelRole, self.mb_prob_label)
+        self.mb_prob_box = QtWidgets.QDoubleSpinBox(self.mb_param_form)
+        self.mb_prob_box.setMaximum(1.0)
+        self.mb_prob_box.setSingleStep(0.01)
+        self.mb_prob_box.setValue(mb.p)
+        self.mb_param_form_layout.setWidget(1, QtWidgets.QFormLayout.FieldRole, self.mb_prob_box)
+
+        self.mb_blur_lower_label = QtWidgets.QLabel(self.mb_param_form)
+        self.mb_blur_lower_label.setText('Blur Lower Limit:')
+        self.mb_param_form_layout.setWidget(2, QtWidgets.QFormLayout.LabelRole, self.mb_blur_lower_label)
+        self.mb_blur_lower_box = QtWidgets.QDoubleSpinBox(self.mb_param_form)
+        self.mb_blur_lower_box.setDecimals(0)
+        self.mb_blur_lower_box.setMinimum(3.0)
+        self.mb_blur_lower_box.setMaximum(100.0)
+        self.mb_blur_lower_box.setValue(mb.blur_limit[0])
+        self.mb_param_form_layout.setWidget(2, QtWidgets.QFormLayout.FieldRole, self.mb_blur_lower_box)
+
+        self.mb_blur_upper_label = QtWidgets.QLabel(self.mb_param_form)
+        self.mb_blur_upper_label.setText('Blur Upper Limit:')
+        self.mb_param_form_layout.setWidget(3, QtWidgets.QFormLayout.LabelRole, self.mb_blur_upper_label)
+        self.mb_blur_upper_box = QtWidgets.QDoubleSpinBox(self.mb_param_form)
+        self.mb_blur_upper_box.setDecimals(0)
+        self.mb_blur_upper_box.setMinimum(3.0)
+        self.mb_blur_upper_box.setMaximum(100.0)
+        self.mb_blur_upper_box.setValue(mb.blur_limit[1])
+        self.mb_param_form_layout.setWidget(3, QtWidgets.QFormLayout.FieldRole, self.mb_blur_upper_box)
+
+        self.mb_param_form.setVisible(True)
+
+
+    def setupIsoNoiseView(self):
+        iso = ac.IsoNoiseParams()
+
+        self.iso_param_form = QtWidgets.QWidget(self)
+        self.iso_param_form.setGeometry(QtCore.QRect(20, 110, 300, 200))
+
+        self.iso_param_form_layout = QtWidgets.QFormLayout(self.iso_param_form)
+        self.iso_param_form_layout.setContentsMargins(0, 0, 0, 0)
+
+        self.iso_true_box_label = QtWidgets.QLabel(self.iso_param_form)
+        self.iso_true_box_label.setText('Always Apply:')
+        self.iso_param_form_layout.setWidget(0, QtWidgets.QFormLayout.LabelRole, self.iso_true_box_label)
+        self.iso_true_box = QtWidgets.QCheckBox(self.iso_param_form)
+        self.iso_true_box.setChecked(iso.always_apply)
+        self.iso_param_form_layout.setWidget(0, QtWidgets.QFormLayout.FieldRole, self.iso_true_box)
+
+        self.iso_prob_label = QtWidgets.QLabel(self.iso_param_form)
+        self.iso_prob_label.setText('Probability (unit interval): ')
+        self.iso_param_form_layout.setWidget(1, QtWidgets.QFormLayout.LabelRole, self.iso_prob_label)
+        self.iso_prob_box = QtWidgets.QDoubleSpinBox(self.iso_param_form)
+        self.iso_prob_box.setMaximum(1.0)
+        self.iso_prob_box.setMinimum(0.0)
+        self.iso_prob_box.setSingleStep(0.01)
+        self.iso_prob_box.setProperty("value", iso.p)
+        self.iso_param_form_layout.setWidget(1, QtWidgets.QFormLayout.FieldRole, self.iso_prob_box)
+
+        self.iso_intensity_lower_label = QtWidgets.QLabel(self.iso_param_form)
+        self.iso_intensity_lower_label.setText('Intensity Lower Limit:')
+        self.iso_param_form_layout.setWidget(2, QtWidgets.QFormLayout.LabelRole, self.iso_intensity_lower_label)
+        self.iso_intensity_lower_box = QtWidgets.QDoubleSpinBox(self.iso_param_form)
+        self.iso_intensity_lower_box.setMaximum(1.0)
+        self.iso_intensity_lower_box.setMinimum(0.0)
+        self.iso_intensity_lower_box.setSingleStep(0.01)
+        self.iso_intensity_lower_box.setProperty("value", iso.intensity[0])
+        self.iso_param_form_layout.setWidget(2, QtWidgets.QFormLayout.FieldRole, self.iso_intensity_lower_box)
+        
+        self.iso_intensity_upper_label = QtWidgets.QLabel(self.iso_param_form)
+        self.iso_intensity_upper_label.setText('Intensity Upper Limit:')
+        self.iso_param_form_layout.setWidget(3, QtWidgets.QFormLayout.LabelRole, self.iso_intensity_upper_label)
+        self.iso_intensity_upper_box = QtWidgets.QDoubleSpinBox(self.iso_param_form)
+        self.iso_intensity_upper_box.setMaximum(1.0)
+        self.iso_intensity_upper_box.setMinimum(0.0)
+        self.iso_intensity_upper_box.setSingleStep(0.01)
+        self.iso_intensity_upper_box.setProperty("value", iso.intensity[1])
+        self.iso_param_form_layout.setWidget(3, QtWidgets.QFormLayout.FieldRole, self.iso_intensity_upper_box)
+
+        self.iso_color_lower_label = QtWidgets.QLabel(self.iso_param_form)
+        self.iso_color_lower_label.setText('Color Shift Lower Limit:')
+        self.iso_param_form_layout.setWidget(4, QtWidgets.QFormLayout.LabelRole, self.iso_color_lower_label)
+        self.iso_color_lower_box = QtWidgets.QDoubleSpinBox(self.iso_param_form)
+        self.iso_color_lower_box.setMaximum(1.0)
+        self.iso_color_lower_box.setMinimum(0.0)
+        self.iso_color_lower_box.setSingleStep(0.01)
+        self.iso_color_lower_box.setProperty("value", iso.color_shift[0])
+        self.iso_param_form_layout.setWidget(4, QtWidgets.QFormLayout.FieldRole, self.iso_color_lower_box)
+
+        self.iso_color_upper_label = QtWidgets.QLabel(self.iso_param_form)
+        self.iso_color_upper_label.setText('Color Shift Upper Limit:')
+        self.iso_param_form_layout.setWidget(5, QtWidgets.QFormLayout.LabelRole, self.iso_color_upper_label)
+        self.iso_color_upper_box = QtWidgets.QDoubleSpinBox(self.iso_param_form)
+        self.iso_color_upper_box.setMaximum(1.0)
+        self.iso_color_upper_box.setMinimum(0.0)
+        self.iso_color_upper_box.setSingleStep(0.01)
+        self.iso_color_upper_box.setProperty("value", iso.color_shift[1])
+        self.iso_param_form_layout.setWidget(5, QtWidgets.QFormLayout.FieldRole, self.iso_color_upper_box)
+
+        self.iso_param_form.setVisible(True)
+
+
+    def setupRotateView(self):
         pass
+
+
+    def setupCutOutView(self):
+        pass
+
+
+    def setupCropView(self):
+        pass
+
+
+    def setupRgbView(self):
+        pass
+
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -177,6 +406,7 @@ images in the selected directory it must be applied to.''')
         self.pipeline_count = 0
         # TODO
         # add actual default pipelines
+        # self.pipeline_window_list.append()
 
 
     def unsetDefault(self):

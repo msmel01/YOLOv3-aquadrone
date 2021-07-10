@@ -45,9 +45,6 @@ def cutout(image, name, dirname):
     cv2.imwrite(img_name, aug_image)
 
 
-def gridMask(image, name, dirname): # to be implemented by me
-    pass
-
 
 def crop(image, name, dirname):
     transform = A.Compose([A.Crop(always_apply=False, p=1.0, x_min=0, y_min=0, x_max=160, y_max=106)])

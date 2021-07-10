@@ -2,14 +2,69 @@ from PyQt5 import QtWidgets, QtCore, QtGui
 from PyQt5.QtWidgets import QApplication, QMainWindow, QMessageBox
 import sys
 
-class Pipeline(QtWidgets.QWidget):
-    def __init__(self):
+class PipelineWindow(QMainWindow):
+    def __init__(self, default_name, parent):
+        super(QMainWindow, self).__init__()
+        self.default_name = default_name
+        self.name = self.default_name
+        self.aug_objects = []
+        self.aug_names = ['Horizontal Flip', 'Motion Blur', 'ISO Noise', 'Rotate',
+                            'Cutout', 'Crop', 'RGB Shift']
+        parentTopLeft = parent.geometry().topLeft()
+        self.setGeometry(parentTopLeft.x() + 100, parentTopLeft.y() + 100, 600, 150)
+        self.setWindowTitle('Pipeline configuration window')
+        self.setupUi()
+
+
+    def setupUi(self):
+        # pipeline name label
+        self.pipeline_name_label = QtWidgets.QLabel(self)
+        self.pipeline_name_label.setObjectName('pipeline_name_label')
+        self.pipeline_name_label.setText('Pipeline Name: ')
+        self.pipeline_name_label.setGeometry(20, 10, 200, 30)
+        # textbox to enter name
+        self.pipeline_name_textbox = QtWidgets.QLineEdit(self)
+        self.pipeline_name_textbox.setObjectName('pipeline_name_textbox')
+        self.pipeline_name_textbox.setPlaceholderText(self.name)
+        self.pipeline_name_textbox.setGeometry(QtCore.QRect(135, 10, 400, 30))
+        self.pipeline_name_textbox.textEdited.connect(lambda: self.updateName(self.pipeline_name_textbox.text()))
+        # add select toggle box to add transformations
+        self.aug_combo_box = QtWidgets.QComboBox(self)
+        self.aug_combo_box.setObjectName('aug_combo_box')
+        self.aug_combo_box.setGeometry(20, 60, 480, 30)
+        for aug in self.aug_names:
+            self.aug_combo_box.addItem(aug)
+        # self.aug_combo_box.activated.connect(lambda: self.showParams(self.aug_combo_box.currentIndex()))
+        # add button
+        self.add_aug_img = QtGui.QPixmap('plus.png')
+        self.add_aug_icon = QtGui.QIcon(self.add_aug_img)
+        self.add_aug_button = QtWidgets.QPushButton(self)
+        self.add_aug_button.setGeometry(510, 58, 35, 35)
+        self.add_aug_button.setIcon(self.add_aug_icon)
+        self.add_aug_button.setIconSize(QtCore.QSize(25,25))
+        self.add_aug_button.clicked.connect(self.addAug)
+        # remove button
+        self.rmv_aug_img = QtGui.QPixmap('remove.png')
+        self.rmv_aug_icon = QtGui.QIcon(self.rmv_aug_img)
+        self.rmv_aug_button = QtWidgets.QPushButton(self)
+        self.rmv_aug_button.setGeometry(550, 58, 35, 35)
+        self.rmv_aug_button.setIcon(self.rmv_aug_icon)
+        self.rmv_aug_button.setIconSize(QtCore.QSize(25,25))
+        self.add_aug_button.clicked.connect(self.removeAug)
+
+
+    def updateName(self, new_name):
+        self.name = new_name
+        if new_name == '':
+            self.name = self.default_name
+
+
+    def addAug(self):
         pass
 
 
-    def initUi(self):
+    def removeAug(self):
         pass
-
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -18,10 +73,11 @@ class MainWindow(QMainWindow):
         self.setWindowTitle('Data Augmentation GUI')
         self.setWindowFlags(QtCore.Qt.MSWindowsFixedSizeDialogHint)
         self.pipeline_count = 0
-        self.initUI()
+        self.setupUi()
+        self.pipeline_window_list = []
 
 
-    def initUI(self):
+    def setupUi(self):
         # Add heading
         self.heading = QtWidgets.QLabel(self)
         self.heading.setGeometry(QtCore.QRect(20, 10, 430, 40))
@@ -90,14 +146,14 @@ images in the selected directory it must be applied to.''')
         self.rmv_pipeline_button.setEnabled(False)
         self.rmv_pipeline_button.clicked.connect(self.removePipeline)
         # layout for added pipelines
-        self.pipeline_list = QtWidgets.QListWidget(self)
-        self.pipeline_list.setGeometry(QtCore.QRect(20, 190, 420, 250))
-        self.pipeline_list.setObjectName('pipeline_list')
+        self.pipeline_layout = QtWidgets.QListWidget(self)
+        self.pipeline_layout.setGeometry(QtCore.QRect(20, 190, 420, 250))
+        self.pipeline_layout.setObjectName('pipeline_list')
         self.list_scroll_bar = QtWidgets.QScrollBar(self)
         self.list_scroll_bar.setObjectName('list_scroll_bar')
-        self.pipeline_list.setVerticalScrollBar(self.list_scroll_bar)
-        self.pipeline_list.itemClicked.connect(lambda: self.rmv_pipeline_button.setEnabled(True))
-        self.pipeline_list.itemDoubleClicked.connect(lambda: print('Open box')) # TODO
+        self.pipeline_layout.setVerticalScrollBar(self.list_scroll_bar)
+        self.pipeline_layout.itemClicked.connect(lambda: self.rmv_pipeline_button.setEnabled(True))
+        self.pipeline_layout.itemDoubleClicked.connect(self.showPipelineWindow)
 
 
     def pickImgDir(self):
@@ -117,9 +173,10 @@ images in the selected directory it must be applied to.''')
             retval = default_warning.exec_()
             if retval != QtWidgets.QMessageBox.Ok: return
         
-        self.pipeline_list.clear()
+        self.pipeline_layout.clear()
+        self.pipeline_count = 0
         # TODO
-        # reset pipeline count
+        # add actual default pipelines
 
 
     def unsetDefault(self):
@@ -132,7 +189,7 @@ images in the selected directory it must be applied to.''')
             retval = default_warning.exec_()
             if retval != QtWidgets.QMessageBox.Ok: return
         
-        self.pipeline_list.clear()
+        self.pipeline_layout.clear()
         self.pipeline_count = 0
 
 
@@ -144,20 +201,27 @@ images in the selected directory it must be applied to.''')
 
     def addPipeline(self):
         self.pipeline_count += 1
-        self.pipeline_list.insertItem(self.pipeline_count, 'New pipeline {}'.format(self.pipeline_count))
-        # create a new window class based on it
+        pipeline_name = 'New pipeline {}'.format(self.pipeline_count)
+        self.pipeline_layout.insertItem(self.pipeline_count, pipeline_name)
+        self.pipeline_window_list.append(PipelineWindow(pipeline_name, self))
 
 
     def removePipeline(self):
         self.pipeline_count -= 1
-        currentItemText = self.pipeline_list.currentItem().text()
-        currentItem = self.pipeline_list.findItems(currentItemText, QtCore.Qt.MatchExactly)[0]
-        currentItemRow = self.pipeline_list.row(currentItem)
-        self.pipeline_list.takeItem(currentItemRow)
+        currentItemText = self.pipeline_layout.currentItem().text()
+        currentItem = self.pipeline_layout.findItems(currentItemText, QtCore.Qt.MatchExactly)[0]
+        currentItemRow = self.pipeline_layout.row(currentItem)
+        self.pipeline_layout.takeItem(currentItemRow)
         # remove the assocated class with it
+
+
+    def showPipelineWindow(self):
+        pass
 
 
 app = QApplication(sys.argv)
 win = MainWindow()
-win.show()
+win2 = PipelineWindow('sample', win)
+#win.show()
+win2.show()
 sys.exit(app.exec_())

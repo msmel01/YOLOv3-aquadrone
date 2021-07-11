@@ -22,7 +22,7 @@ class PipelineWindow(QWidget):
         self.aug_param.append(ac.RgbShiftParams())
         parentTopLeft = parent.geometry().topLeft()
         self.setGeometry(parentTopLeft.x() + 100, parentTopLeft.y() + 100, 600, 450)
-        self.setWindowTitle('Pipeline configuration window')
+        self.setWindowTitle('{} Configuration'.format(default_name))
         self.setupUi()
 
 
@@ -61,13 +61,31 @@ class PipelineWindow(QWidget):
         self.rmv_aug_button.setIcon(self.rmv_aug_icon)
         self.rmv_aug_button.setIconSize(QtCore.QSize(25,25))
         self.rmv_aug_button.clicked.connect(self.removeAug)
+
+        self.setupHorFlipView()
+        self.setupMotionBlurView()
+        self.setupIsoNoiseView()
+        self.setupRotateView()
+        self.setupCutOutView()
+        self.setupCropView()
+        self.setupRgbView()
+
         self.updateUi()
+        # save and exit
+        self.save_exit_button = QtWidgets.QPushButton(self)
+        self.save_exit_button.setText('Done')
+        self.save_exit_button.setGeometry(470, 400, 100, 30)
+
+
+    def saveExit(self): # TO BE IMPLEMENTED
+        pass
 
 
     def updateName(self, new_name):
         self.name = new_name
         if new_name == '':
             self.name = self.default_name
+        self.setWindowTitle('{} Configuration'.format(self.name))
 
 
     def updateUi(self):
@@ -91,7 +109,7 @@ class PipelineWindow(QWidget):
 
         if selected_aug == 0: # horizontal flip
             self.hf_prob_box.setValue(self.aug_param[0].p)
-            self.hf_param_form.setVisible(True)
+            self.hf_param_form.setVisible(True)  
 
         elif selected_aug == 1: # motion blur
             self.mb_true_box.setChecked(self.aug_param[1].always_apply)
@@ -161,101 +179,109 @@ class PipelineWindow(QWidget):
         self.prev_aug = selected_aug
 
         if selected_aug == 0: # horizontal flip
-            self.setupHorFlipView()
+            self.hf_param_form.setVisible(True)
 
         elif selected_aug == 1: # motion blur
-            self.setupMotionBlurView()
+            self.mb_param_form.setVisible(True)
 
         elif selected_aug == 2: # iso noise
-            self.setupIsoNoiseView()
+            self.iso_param_form.setVisible(True)
 
         elif selected_aug == 3: # rotate
-            self.setupRotateView()
+            self.rot_param_form.setVisible(True)
 
         elif selected_aug == 4: # cutout
-            self.setupCutOutView()
+            self.cut_param_form.setVisible(True)
 
         elif selected_aug == 5: # crop
-            self.setupCropView()
+            self.crop_param_form.setVisible(True)
 
         else: # rgb shift
-            self.setupRgbView()    
-
+            self.rgb_param_form.setVisible(True)
+            
         self.add_aug_button.setEnabled(False)
 
 
     def removeAug(self):
         selected_aug = self.aug_combo_box.currentIndex()
+
+        if self.aug_oneh[selected_aug] == False: return
+
         self.aug_oneh[selected_aug] = False
         self.add_aug_button.setEnabled(True)
 
         if selected_aug == 0: # horizontal flip
-            hf = ac.HorizontalFlipParams()
-            self.aug_param[0].p = hf.p
+            self.aug_param[0].setDefault()
+            self.hf_prob_box.setValue(self.aug_param[1].p)
             self.hf_param_form.setVisible(False)
 
         elif selected_aug == 1: # motion blur
-            mb = ac.MotionBlurParams()
-            self.aug_param[1].always_apply = mb.always_apply
-            self.aug_param[1].p = mb.p
-            self.aug_param[1].blur_limit[0] = mb.blur_limit[0]
-            self.aug_param[1].blur_limit[1] = mb.blur_limit[1]
+            self.aug_param[1].setDefault()
+            self.mb_true_box.setChecked(self.aug_param[1].always_apply)
+            self.mb_prob_box.setValue(self.aug_param[1].p)
+            self.mb_blur_lower_box.setValue(self.aug_param[1].blur_limit[0])
+            self.mb_blur_upper_box.setValue(self.aug_param[1].blur_limit[1])
             self.mb_param_form.setVisible(False)
 
         elif selected_aug == 2: # iso noise
-            iso = ac.IsoNoiseParams()
-            self.aug_param[2].always_apply = iso.always_apply
-            self.aug_param[2].p = iso.p
-            self.aug_param[2].intensity[0] = iso.intensity[0]
-            self.aug_param[2].intensity[1] = iso.intensity[1]
-            self.aug_param[2].color_shift[0] = iso.color_shift[0]
-            self.aug_param[2].color_shift[1] = iso.color_shift[1]
+            self.aug_param[2].setDefault()
+            self.iso_true_box.setChecked(self.aug_param[2].always_apply)
+            self.iso_prob_box.setProperty('value', self.aug_param[2].p)
+            self.iso_intensity_lower_box.setProperty('value', self.aug_param[2].intensity[0])
+            self.iso_intensity_upper_box.setProperty('value', self.aug_param[2].intensity[1])
+            self.iso_color_lower_box.setProperty('value', self.aug_param[2].color_shift[0])
+            self.iso_color_upper_box.setProperty('value', self.aug_param[2].color_shift[1])
             self.iso_param_form.setVisible(False)
 
         elif selected_aug == 3: # rotate
-            rot = ac.RotateParams()
-            self.aug_param[3].always_apply = rot.always_apply
-            self.aug_param[3].p = rot.p
-            self.aug_param[3].limit[0] = rot.limit[0]
-            self.aug_param[3].limit[1] = rot.limit[1]
-            self.aug_param[3].interpolation = rot.interpolation
-            self.aug_param[3].border_mode = rot.border_mode
-            self.aug_param[3].value[0] = rot.value[0]
-            self.aug_param[3].value[1] = rot.value[1]
-            self.aug_param[3].value[2] = rot.value[2]
+            self.aug_param[3].setDefault()
+            self.rot_angle_lower_box.setProperty('value', self.aug_param[3].limit[0])
+            self.rot_angle_upper_box.setProperty('value', self.aug_param[3].limit[1])
+            self.rot_intp_combo.setProperty('value', self.aug_param[3].interpolation)
+            self.rot_border_combo.setProperty('value', self.aug_param[3].border_mode)
+            self.rot_red_var_box.setProperty('value', self.aug_param[3].value[0])
+            if self.aug_param[3].border_mode != 0: self.rot_red_var_box.setEnabled(False)
+            self.rot_blue_var_box.setProperty('value', self.aug_param[3].value[1])
+            if self.aug_param[3].border_mode != 0: self.rot_blue_var_box.setEnabled(False)
+            self.rot_green_var_box.setProperty('value', self.aug_param[3].value[2])
+            if self.aug_param[3].border_mode != 0: self.rot_green_var_box.setEnabled(False)
+            self.rot_true_box.setChecked(self.aug_param[3].always_apply)
+            self.rot_prob_box.setProperty('value', self.aug_param[3].p)
             self.rot_param_form.setVisible(False)
 
         elif selected_aug == 4: # cutout
-            cut = ac.CutOutParams()
-            self.aug_param[4].always_apply = cut.always_apply
-            self.aug_param[4].p = cut.p
-            self.aug_param[4].num_holes = cut.num_holes
-            self.aug_param[4].max_h_size = cut.max_h_size
-            self.aug_param[4].max_w_size = cut.max_w_size
+            self.aug_param[4].setDefault()
+            self.cut_true_box.setChecked(self.aug_param[4].always_apply)
+            self.cut_prob_box.setProperty('value', self.aug_param[4].p)
+            self.numholes_box.setProperty('value', self.aug_param[4].num_holes)
+            self.maxh_box.setProperty('value', self.aug_param[4].max_h_size)
+            self.maxw_box.setProperty('value', self.aug_param[4].max_w_size)
             self.cut_param_form.setVisible(False)
 
         elif selected_aug == 5: # crop
-            crop = ac.CropParams()
-            self.aug_param[5].always_apply = crop.always_apply
-            self.aug_param[5].p = crop.p
-            self.aug_param[5].x_min = crop.x_min
-            self.aug_param[5].x_max = crop.x_max
-            self.aug_param[5].y_min = crop.y_min
-            self.aug_param[5].y_max = crop.y_max
+            self.aug_param[5].setDefault()
+            self.crop_true_box.setChecked(self.aug_param[5].always_apply)
+            self.crop_prob_box.setProperty('value', self.aug_param[5].p)
+            self.xmin_box.setProperty('value', self.aug_param[5].x_min)
+            self.xmax_box.setProperty('value', self.aug_param[5].x_max)
+            self.ymin_box.setProperty('value', self.aug_param[5].y_min)
+            self.ymax_box.setProperty('value', self.aug_param[5].y_max)
             self.crop_param_form.setVisible(False)
 
         else: # rgb shift
-            rgb = ac.RgbShiftParams()
-            self.aug_param[6].always_apply = rgb.always_apply
-            self.aug_param[6].p = rgb.p
-            self.aug_param[6].r_shift_limit[0] = rgb.r_shift_limit[0]
-            self.aug_param[6].r_shift_limit[1] = rgb.r_shift_limit[1]
-            self.aug_param[6].g_shift_limit[0] = rgb.g_shift_limit[0]
-            self.aug_param[6].g_shift_limit[1] = rgb.g_shift_limit[1]
-            self.aug_param[6].b_shift_limit[0] = rgb.b_shift_limit[0]
-            self.aug_param[6].b_shift_limit[1] = rgb.b_shift_limit[1]
+            self.aug_param[6].setDefault()
+            self.rgb_true_box.setChecked(self.aug_param[6].always_apply)
+            self.rgb_prob_box.setProperty('value', self.aug_param[6].p)
+            self.red_shift_lower_box.setProperty('value', self.aug_param[6].r_shift_limit[0])
+            self.red_shift_upper_box.setProperty('value', self.aug_param[6].r_shift_limit[1])
+            self.green_shift_lower_box.setProperty('value', self.aug_param[6].g_shift_limit[0])
+            self.green_shift_upper_box.setProperty('value', self.aug_param[6].g_shift_limit[1])
+            self.blue_shift_lower_box.setProperty('value', self.aug_param[6].b_shift_limit[0])
+            self.blue_shift_upper_box.setProperty('value', self.aug_param[6].b_shift_limit[1])
             self.rgb_param_form.setVisible(False)           
 
+
+    #################################### Horizontal Flip ###############################################
 
     def setupHorFlipView(self):
         self.hf_param_form = QtWidgets.QWidget(self)
@@ -271,11 +297,17 @@ class PipelineWindow(QWidget):
         self.hf_prob_box.setMaximum(1.0)
         self.hf_prob_box.setSingleStep(0.01)
         self.hf_prob_box.setValue(ac.HorizontalFlipParams().p)
+        self.hf_prob_box.valueChanged.connect(self.setHorFlipProb)
 
         self.hf_param_form_layout.setWidget(1, QtWidgets.QFormLayout.FieldRole, self.hf_prob_box)
-        self.hf_param_form.setVisible(True)
+        self.hf_param_form.setVisible(False)
 
 
+    def setHorFlipProb(self): self.aug_param[0].p = self.hf_prob_box.value()
+
+
+    #################################### Motion Blur ####################################################
+    
     def setupMotionBlurView(self):
         mb = ac.MotionBlurParams()
             
@@ -291,6 +323,7 @@ class PipelineWindow(QWidget):
         self.mb_true_box = QtWidgets.QCheckBox(self.mb_param_form)
         self.mb_true_box.setChecked(mb.always_apply)
         self.mb_param_form_layout.setWidget(0, QtWidgets.QFormLayout.FieldRole, self.mb_true_box)
+        self.mb_true_box.stateChanged.connect(self.setMotionBlurApply)
 
         self.mb_prob_label = QtWidgets.QLabel(self.mb_param_form)
         self.mb_prob_label.setText('Probability (unit interval): ')
@@ -300,29 +333,44 @@ class PipelineWindow(QWidget):
         self.mb_prob_box.setSingleStep(0.01)
         self.mb_prob_box.setValue(mb.p)
         self.mb_param_form_layout.setWidget(1, QtWidgets.QFormLayout.FieldRole, self.mb_prob_box)
+        self.mb_prob_box.valueChanged.connect(self.setMotionBlurProb)
 
         self.mb_blur_lower_label = QtWidgets.QLabel(self.mb_param_form)
         self.mb_blur_lower_label.setText('Blur Lower Limit:')
         self.mb_param_form_layout.setWidget(2, QtWidgets.QFormLayout.LabelRole, self.mb_blur_lower_label)
-        self.mb_blur_lower_box = QtWidgets.QDoubleSpinBox(self.mb_param_form)
-        self.mb_blur_lower_box.setDecimals(0)
-        self.mb_blur_lower_box.setMinimum(3.0)
-        self.mb_blur_lower_box.setMaximum(100.0)
+        self.mb_blur_lower_box = QtWidgets.QSpinBox(self.mb_param_form)
+        self.mb_blur_lower_box.setMinimum(3)
+        self.mb_blur_lower_box.setMaximum(100)
         self.mb_blur_lower_box.setValue(mb.blur_limit[0])
+        self.mb_blur_lower_box.valueChanged.connect(self.setMotionBlurLowerLimit)
         self.mb_param_form_layout.setWidget(2, QtWidgets.QFormLayout.FieldRole, self.mb_blur_lower_box)
 
         self.mb_blur_upper_label = QtWidgets.QLabel(self.mb_param_form)
         self.mb_blur_upper_label.setText('Blur Upper Limit:')
         self.mb_param_form_layout.setWidget(3, QtWidgets.QFormLayout.LabelRole, self.mb_blur_upper_label)
-        self.mb_blur_upper_box = QtWidgets.QDoubleSpinBox(self.mb_param_form)
-        self.mb_blur_upper_box.setDecimals(0)
-        self.mb_blur_upper_box.setMinimum(3.0)
-        self.mb_blur_upper_box.setMaximum(100.0)
+        self.mb_blur_upper_box = QtWidgets.QSpinBox(self.mb_param_form)
+        self.mb_blur_upper_box.setMinimum(3)
+        self.mb_blur_upper_box.setMaximum(100)
         self.mb_blur_upper_box.setValue(mb.blur_limit[1])
+        self.mb_blur_upper_box.valueChanged.connect(self.setMotionBlurUpperLimit)
         self.mb_param_form_layout.setWidget(3, QtWidgets.QFormLayout.FieldRole, self.mb_blur_upper_box)
 
-        self.mb_param_form.setVisible(True)
+        self.mb_param_form.setVisible(False)
 
+
+    def setMotionBlurApply(self): self.aug_param[1].always_apply = self.mb_true_box.isChecked()
+
+
+    def setMotionBlurProb(self): self.aug_param[1].p = self.mb_prob_box.value()
+
+
+    def setMotionBlurLowerLimit(self): self.aug_param[1].blur_limit[0] = self.mb_blur_lower_box.value()
+
+
+    def setMotionBlurUpperLimit(self): self.aug_param[1].blur_limit[1] = self.mb_blur_upper_box.value()
+
+
+    #################################### Iso Noise #####################################################
 
     def setupIsoNoiseView(self):
         iso = ac.IsoNoiseParams()
@@ -390,7 +438,7 @@ class PipelineWindow(QWidget):
         self.iso_color_upper_box.setProperty('value', iso.color_shift[1])
         self.iso_param_form_layout.setWidget(5, QtWidgets.QFormLayout.FieldRole, self.iso_color_upper_box)
 
-        self.iso_param_form.setVisible(True)
+        self.iso_param_form.setVisible(False)
 
 
     def setupRotateView(self):
@@ -488,7 +536,7 @@ class PipelineWindow(QWidget):
         if rot.border_mode != 0: self.rot_green_var_box.setEnabled(False)
         self.rot_param_form_layout.setWidget(8, QtWidgets.QFormLayout.FieldRole, self.rot_green_var_box)
 
-        self.rot_param_form.setVisible(True)
+        self.rot_param_form.setVisible(False)
 
 
     def setupCutOutView(self):
@@ -547,7 +595,7 @@ class PipelineWindow(QWidget):
         self.maxw_box.setProperty('value', cut.max_w_size)
         self.cut_param_form_layout.setWidget(4, QtWidgets.QFormLayout.FieldRole, self.maxw_box)
 
-        self.cut_param_form.setVisible(True)
+        self.cut_param_form.setVisible(False)
 
 
     def setupCropView(self):
@@ -616,7 +664,7 @@ class PipelineWindow(QWidget):
         self.ymax_box.setProperty('value', crop.y_max)
         self.crop_param_form_layout.setWidget(5, QtWidgets.QFormLayout.FieldRole, self.ymax_box)
 
-        self.crop_param_form.setVisible(True)
+        self.crop_param_form.setVisible(False)
 
 
     def setupRgbView(self):
@@ -705,7 +753,7 @@ class PipelineWindow(QWidget):
         self.blue_shift_upper_box.setProperty('value', rgb.b_shift_limit[1])
         self.rgb_param_form_layout.setWidget(7, QtWidgets.QFormLayout.FieldRole, self.blue_shift_upper_box)
 
-        self.rgb_param_form.setVisible(True)
+        self.rgb_param_form.setVisible(False)
 
 
 class MainWindow(QMainWindow):

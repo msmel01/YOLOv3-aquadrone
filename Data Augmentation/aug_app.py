@@ -8,10 +8,18 @@ class PipelineWindow(QWidget):
         super(QWidget, self).__init__()
         self.default_name = default_name
         self.name = self.default_name
-        self.prev_aug = -1
-        self.aug_objects = [None] * 7
-        self.aug_names = ['Horizontal Flip', 'Motion Blur', 'ISO Noise', 'Rotate',
+        self.prev_aug = 0
+        self.aug_oneh = [False] * 7
+        self.aug_objects = ['Horizontal Flip', 'Motion Blur', 'ISO Noise', 'Rotate',
                             'Cutout', 'Crop', 'RGB Shift']
+        self.aug_param = []
+        self.aug_param.append(ac.HorizontalFlipParams())
+        self.aug_param.append(ac.MotionBlurParams())
+        self.aug_param.append(ac.IsoNoiseParams())
+        self.aug_param.append(ac.RotateParams())
+        self.aug_param.append(ac.CutOutParams())
+        self.aug_param.append(ac.CropParams())
+        self.aug_param.append(ac.RgbShiftParams())
         parentTopLeft = parent.geometry().topLeft()
         self.setGeometry(parentTopLeft.x() + 100, parentTopLeft.y() + 100, 600, 450)
         self.setWindowTitle('Pipeline configuration window')
@@ -34,7 +42,7 @@ class PipelineWindow(QWidget):
         self.aug_combo_box = QtWidgets.QComboBox(self)
         self.aug_combo_box.setObjectName('aug_combo_box')
         self.aug_combo_box.setGeometry(20, 60, 480, 30)
-        for aug in self.aug_names:
+        for aug in self.aug_objects:
             self.aug_combo_box.addItem(aug)
         self.aug_combo_box.activated.connect(self.updateUi)
         # add button
@@ -53,7 +61,8 @@ class PipelineWindow(QWidget):
         self.rmv_aug_button.setIcon(self.rmv_aug_icon)
         self.rmv_aug_button.setIconSize(QtCore.QSize(25,25))
         self.rmv_aug_button.clicked.connect(self.removeAug)
-        
+        self.updateUi()
+
 
     def updateName(self, new_name):
         self.name = new_name
@@ -61,78 +70,94 @@ class PipelineWindow(QWidget):
             self.name = self.default_name
 
 
-    def updateUi(self): # updates UI by 
+    def updateUi(self):
         selected_aug = self.aug_combo_box.currentIndex()
 
-        if self.prev_aug == 0 and self.prev_aug != selected_aug: self.hf_param_form.setVisible(False)
-        elif self.prev_aug == 1 and self.prev_aug != selected_aug: self.mb_param_form.setVisible(False) 
-        elif self.prev_aug == 2 and self.prev_aug != selected_aug: self.iso_param_form.setVisible(False)
-        elif self.prev_aug == 3 and self.prev_aug != selected_aug: self.rot_param_form.setVisible(False)
-        elif selected_aug == 4: # cutout
-            pass
-        elif selected_aug == 5: # crop
-            pass
-        else: # rgb shift
-            pass
-        #######################################
-        if self.aug_objects[selected_aug] == None:
+        if self.aug_oneh[self.prev_aug]:
+            if self.prev_aug == 0 and self.prev_aug != selected_aug: self.hf_param_form.setVisible(False)
+            elif self.prev_aug == 1 and self.prev_aug != selected_aug: self.mb_param_form.setVisible(False) 
+            elif self.prev_aug == 2 and self.prev_aug != selected_aug: self.iso_param_form.setVisible(False)
+            elif self.prev_aug == 3 and self.prev_aug != selected_aug: self.rot_param_form.setVisible(False)
+            elif self.prev_aug == 4 and self.prev_aug != selected_aug: self.cut_param_form.setVisible(False)
+            elif self.prev_aug == 5 and self.prev_aug != selected_aug: self.crop_param_form.setVisible(False)
+            elif self.prev_aug != selected_aug: self.rgb_param_form.setVisible(False)
+
+        if self.aug_oneh[selected_aug] == False: # enable/disable add button
             self.add_aug_button.setEnabled(True)
+            self.prev_aug = selected_aug
             return
         else:
             self.add_aug_button.setEnabled(False)
-        ########################################
 
         if selected_aug == 0: # horizontal flip
+            self.hf_prob_box.setValue(self.aug_param[0].p)
             self.hf_param_form.setVisible(True)
-            self.hf_prob_box.setValue(ac.HorizontalFlipParams().p)
 
         elif selected_aug == 1: # motion blur
+            self.mb_true_box.setChecked(self.aug_param[1].always_apply)
+            self.mb_prob_box.setValue(self.aug_param[1].p)
+            self.mb_blur_upper_box.setValue(self.aug_param[1].blur_limit[1])
+            self.mb_blur_lower_box.setValue(self.aug_param[1].blur_limit[0])
             self.mb_param_form.setVisible(True)
-            mb = ac.MotionBlurParams()
-            self.mb_true_box.setChecked(mb.always_apply)
-            self.mb_prob_box.setValue(mb.p)
-            self.mb_blur_upper_box.setValue(mb.blur_limit[1])
-            self.mb_blur_lower_box.setValue(mb.blur_limit[0])
 
         elif selected_aug == 2: # iso noise
-            iso = ac.IsoNoiseParams()
-            self.iso_true_box.setChecked(iso.always_apply)
-            self.iso_prob_box.setProperty("value", iso.p)
-            self.iso_intensity_lower_box.setProperty("value", iso.intensity[0])
-            self.iso_intensity_upper_box.setProperty("value", iso.intensity[1])
-            self.iso_color_lower_box.setProperty("value", iso.color_shift[0])
-            self.iso_color_upper_box.setProperty("value", iso.color_shift[1])
+            self.iso_true_box.setChecked(self.aug_param[2].always_apply)
+            self.iso_prob_box.setProperty('value', self.aug_param[2].p)
+            self.iso_intensity_lower_box.setProperty('value', self.aug_param[2].intensity[0])
+            self.iso_intensity_upper_box.setProperty('value', self.aug_param[2].intensity[1])
+            self.iso_color_lower_box.setProperty('value', self.aug_param[2].color_shift[0])
+            self.iso_color_upper_box.setProperty('value', self.aug_param[2].color_shift[1])
             self.iso_param_form.setVisible(True)
 
         elif selected_aug == 3: # rotate
-            rot = ac.RotateParams()
-            self.rot_angle_lower_box.setProperty("value", rot.limit[0])
-            self.rot_angle_upper_box.setProperty("value", rot.limit[1])
-            self.rot_intp_combo.setProperty("value", rot.interpolation)
-            self.rot_border_combo.setProperty("value", rot.border_mode)
-            self.rot_red_var_box.setProperty("value", rot.value[0])
-            if rot.border_mode != 0: self.rot_red_var_box.setEnabled(False)
-            self.rot_blue_var_box.setProperty("value", rot.value[1])
-            if rot.border_mode != 0: self.rot_blue_var_box.setEnabled(False)
-            self.rot_green_var_box.setProperty("value", rot.value[2])
-            if rot.border_mode != 0: self.rot_green_var_box.setEnabled(False)
+            self.rot_angle_lower_box.setProperty('value', self.aug_param[3].limit[0])
+            self.rot_angle_upper_box.setProperty('value', self.aug_param[3].limit[1])
+            self.rot_intp_combo.setProperty('value', self.aug_param[3].interpolation)
+            self.rot_border_combo.setProperty('value', self.aug_param[3].border_mode)
+            self.rot_red_var_box.setProperty('value', self.aug_param[3].value[0])
+            if self.aug_param[3].border_mode != 0: self.rot_red_var_box.setEnabled(False)
+            self.rot_blue_var_box.setProperty('value', self.aug_param[3].value[1])
+            if self.aug_param[3].border_mode != 0: self.rot_blue_var_box.setEnabled(False)
+            self.rot_green_var_box.setProperty('value', self.aug_param[3].value[2])
+            if self.aug_param[3].border_mode != 0: self.rot_green_var_box.setEnabled(False)
+            self.rot_true_box.setChecked(self.aug_param[3].always_apply)
+            self.rot_prob_box.setProperty('value', self.aug_param[3].p)
             self.rot_param_form.setVisible(True)
-            self.rot_true_box.setChecked(rot.always_apply)
-            self.rot_prob_box.setProperty("value", rot.p)
 
         elif selected_aug == 4: # cutout
-            pass
+            self.cut_true_box.setChecked(self.aug_param[4].always_apply)
+            self.cut_prob_box.setProperty('value', self.aug_param[4].p)
+            self.numholes_box.setProperty('value', self.aug_param[4].num_holes)
+            self.maxh_box.setProperty('value', self.aug_param[4].max_h_size)
+            self.maxw_box.setProperty('value', self.aug_param[4].max_w_size)
+            self.cut_param_form.setVisible(True)
+
         elif selected_aug == 5: # crop
-            pass
+            self.crop_true_box.setChecked(self.aug_param[5].always_apply)
+            self.crop_prob_box.setProperty('value', self.aug_param[5].p)
+            self.xmin_box.setProperty('value', self.aug_param[5].x_min)
+            self.xmax_box.setProperty('value', self.aug_param[5].x_max)
+            self.ymin_box.setProperty('value', self.aug_param[5].y_min)
+            self.ymax_box.setProperty('value', self.aug_param[5].y_max)
+            self.crop_param_form.setVisible(True)
+
         else: # rgb shift
-            pass
+            self.rgb_true_box.setChecked(self.aug_param[6].always_apply)
+            self.rgb_prob_box.setProperty('value', self.aug_param[6].p)
+            self.red_shift_lower_box.setProperty('value', self.aug_param[6].r_shift_limit[0])
+            self.red_shift_upper_box.setProperty('value', self.aug_param[6].r_shift_limit[1])
+            self.green_shift_lower_box.setProperty('value', self.aug_param[6].g_shift_limit[0])
+            self.green_shift_upper_box.setProperty('value', self.aug_param[6].g_shift_limit[1])
+            self.blue_shift_lower_box.setProperty('value', self.aug_param[6].b_shift_limit[0])
+            self.blue_shift_upper_box.setProperty('value', self.aug_param[6].b_shift_limit[1])
+            self.rgb_param_form.setVisible(True)
 
         self.prev_aug = selected_aug
 
 
     def addAug(self):
         selected_aug = self.aug_combo_box.currentIndex()
-        self.aug_objects[selected_aug] = 1
+        self.aug_oneh[selected_aug] = True
         self.prev_aug = selected_aug
 
         if selected_aug == 0: # horizontal flip
@@ -148,19 +173,88 @@ class PipelineWindow(QWidget):
             self.setupRotateView()
 
         elif selected_aug == 4: # cutout
-            pass
+            self.setupCutOutView()
+
         elif selected_aug == 5: # crop
-            pass
+            self.setupCropView()
+
         else: # rgb shift
-            pass        
+            self.setupRgbView()    
 
         self.add_aug_button.setEnabled(False)
 
 
     def removeAug(self):
         selected_aug = self.aug_combo_box.currentIndex()
-        self.aug_objects[selected_aug] = None
+        self.aug_oneh[selected_aug] = False
         self.add_aug_button.setEnabled(True)
+
+        if selected_aug == 0: # horizontal flip
+            hf = ac.HorizontalFlipParams()
+            self.aug_param[0].p = hf.p
+            self.hf_param_form.setVisible(False)
+
+        elif selected_aug == 1: # motion blur
+            mb = ac.MotionBlurParams()
+            self.aug_param[1].always_apply = mb.always_apply
+            self.aug_param[1].p = mb.p
+            self.aug_param[1].blur_limit[0] = mb.blur_limit[0]
+            self.aug_param[1].blur_limit[1] = mb.blur_limit[1]
+            self.mb_param_form.setVisible(False)
+
+        elif selected_aug == 2: # iso noise
+            iso = ac.IsoNoiseParams()
+            self.aug_param[2].always_apply = iso.always_apply
+            self.aug_param[2].p = iso.p
+            self.aug_param[2].intensity[0] = iso.intensity[0]
+            self.aug_param[2].intensity[1] = iso.intensity[1]
+            self.aug_param[2].color_shift[0] = iso.color_shift[0]
+            self.aug_param[2].color_shift[1] = iso.color_shift[1]
+            self.iso_param_form.setVisible(False)
+
+        elif selected_aug == 3: # rotate
+            rot = ac.RotateParams()
+            self.aug_param[3].always_apply = rot.always_apply
+            self.aug_param[3].p = rot.p
+            self.aug_param[3].limit[0] = rot.limit[0]
+            self.aug_param[3].limit[1] = rot.limit[1]
+            self.aug_param[3].interpolation = rot.interpolation
+            self.aug_param[3].border_mode = rot.border_mode
+            self.aug_param[3].value[0] = rot.value[0]
+            self.aug_param[3].value[1] = rot.value[1]
+            self.aug_param[3].value[2] = rot.value[2]
+            self.rot_param_form.setVisible(False)
+
+        elif selected_aug == 4: # cutout
+            cut = ac.CutOutParams()
+            self.aug_param[4].always_apply = cut.always_apply
+            self.aug_param[4].p = cut.p
+            self.aug_param[4].num_holes = cut.num_holes
+            self.aug_param[4].max_h_size = cut.max_h_size
+            self.aug_param[4].max_w_size = cut.max_w_size
+            self.cut_param_form.setVisible(False)
+
+        elif selected_aug == 5: # crop
+            crop = ac.CropParams()
+            self.aug_param[5].always_apply = crop.always_apply
+            self.aug_param[5].p = crop.p
+            self.aug_param[5].x_min = crop.x_min
+            self.aug_param[5].x_max = crop.x_max
+            self.aug_param[5].y_min = crop.y_min
+            self.aug_param[5].y_max = crop.y_max
+            self.crop_param_form.setVisible(False)
+
+        else: # rgb shift
+            rgb = ac.RgbShiftParams()
+            self.aug_param[6].always_apply = rgb.always_apply
+            self.aug_param[6].p = rgb.p
+            self.aug_param[6].r_shift_limit[0] = rgb.r_shift_limit[0]
+            self.aug_param[6].r_shift_limit[1] = rgb.r_shift_limit[1]
+            self.aug_param[6].g_shift_limit[0] = rgb.g_shift_limit[0]
+            self.aug_param[6].g_shift_limit[1] = rgb.g_shift_limit[1]
+            self.aug_param[6].b_shift_limit[0] = rgb.b_shift_limit[0]
+            self.aug_param[6].b_shift_limit[1] = rgb.b_shift_limit[1]
+            self.rgb_param_form.setVisible(False)           
 
 
     def setupHorFlipView(self):
@@ -253,7 +347,7 @@ class PipelineWindow(QWidget):
         self.iso_prob_box.setMaximum(1.0)
         self.iso_prob_box.setMinimum(0.0)
         self.iso_prob_box.setSingleStep(0.01)
-        self.iso_prob_box.setProperty("value", iso.p)
+        self.iso_prob_box.setProperty('value', iso.p)
         self.iso_param_form_layout.setWidget(1, QtWidgets.QFormLayout.FieldRole, self.iso_prob_box)
 
         self.iso_intensity_lower_label = QtWidgets.QLabel(self.iso_param_form)
@@ -263,7 +357,7 @@ class PipelineWindow(QWidget):
         self.iso_intensity_lower_box.setMaximum(1.0)
         self.iso_intensity_lower_box.setMinimum(0.0)
         self.iso_intensity_lower_box.setSingleStep(0.01)
-        self.iso_intensity_lower_box.setProperty("value", iso.intensity[0])
+        self.iso_intensity_lower_box.setProperty('value', iso.intensity[0])
         self.iso_param_form_layout.setWidget(2, QtWidgets.QFormLayout.FieldRole, self.iso_intensity_lower_box)
         
         self.iso_intensity_upper_label = QtWidgets.QLabel(self.iso_param_form)
@@ -273,7 +367,7 @@ class PipelineWindow(QWidget):
         self.iso_intensity_upper_box.setMaximum(1.0)
         self.iso_intensity_upper_box.setMinimum(0.0)
         self.iso_intensity_upper_box.setSingleStep(0.01)
-        self.iso_intensity_upper_box.setProperty("value", iso.intensity[1])
+        self.iso_intensity_upper_box.setProperty('value', iso.intensity[1])
         self.iso_param_form_layout.setWidget(3, QtWidgets.QFormLayout.FieldRole, self.iso_intensity_upper_box)
 
         self.iso_color_lower_label = QtWidgets.QLabel(self.iso_param_form)
@@ -283,7 +377,7 @@ class PipelineWindow(QWidget):
         self.iso_color_lower_box.setMaximum(1.0)
         self.iso_color_lower_box.setMinimum(0.0)
         self.iso_color_lower_box.setSingleStep(0.01)
-        self.iso_color_lower_box.setProperty("value", iso.color_shift[0])
+        self.iso_color_lower_box.setProperty('value', iso.color_shift[0])
         self.iso_param_form_layout.setWidget(4, QtWidgets.QFormLayout.FieldRole, self.iso_color_lower_box)
 
         self.iso_color_upper_label = QtWidgets.QLabel(self.iso_param_form)
@@ -293,7 +387,7 @@ class PipelineWindow(QWidget):
         self.iso_color_upper_box.setMaximum(1.0)
         self.iso_color_upper_box.setMinimum(0.0)
         self.iso_color_upper_box.setSingleStep(0.01)
-        self.iso_color_upper_box.setProperty("value", iso.color_shift[1])
+        self.iso_color_upper_box.setProperty('value', iso.color_shift[1])
         self.iso_param_form_layout.setWidget(5, QtWidgets.QFormLayout.FieldRole, self.iso_color_upper_box)
 
         self.iso_param_form.setVisible(True)
@@ -322,7 +416,7 @@ class PipelineWindow(QWidget):
         self.rot_prob_box.setMaximum(1.0)
         self.rot_prob_box.setMinimum(0.0)
         self.rot_prob_box.setSingleStep(0.01)
-        self.rot_prob_box.setProperty("value", rot.p)
+        self.rot_prob_box.setProperty('value', rot.p)
         self.rot_param_form_layout.setWidget(1, QtWidgets.QFormLayout.FieldRole, self.rot_prob_box)
 
         self.rot_angle_lower_label = QtWidgets.QLabel(self.rot_param_form)
@@ -332,7 +426,7 @@ class PipelineWindow(QWidget):
         self.rot_angle_lower_box.setMaximum(360)
         self.rot_angle_lower_box.setMinimum(-360)
         self.rot_angle_lower_box.setSingleStep(1)
-        self.rot_angle_lower_box.setProperty("value", rot.limit[0])
+        self.rot_angle_lower_box.setProperty('value', rot.limit[0])
         self.rot_param_form_layout.setWidget(2, QtWidgets.QFormLayout.FieldRole, self.rot_angle_lower_box)
         
         self.rot_angle_upper_label = QtWidgets.QLabel(self.rot_param_form)
@@ -342,7 +436,7 @@ class PipelineWindow(QWidget):
         self.rot_angle_upper_box.setMaximum(360)
         self.rot_angle_upper_box.setMinimum(-360)
         self.rot_angle_upper_box.setSingleStep(0.01)
-        self.rot_angle_upper_box.setProperty("value", rot.limit[1])
+        self.rot_angle_upper_box.setProperty('value', rot.limit[1])
         self.rot_param_form_layout.setWidget(3, QtWidgets.QFormLayout.FieldRole, self.rot_angle_upper_box)
 
         self.rot_intp_label = QtWidgets.QLabel(self.rot_param_form)
@@ -350,7 +444,7 @@ class PipelineWindow(QWidget):
         self.rot_param_form_layout.setWidget(4, QtWidgets.QFormLayout.LabelRole, self.rot_intp_label)
         self.rot_intp_combo = QtWidgets.QComboBox(self.rot_param_form)
         for opt in ['0', '1', '2', '3', '4']: self.rot_intp_combo.addItem(opt)
-        self.rot_intp_combo.setProperty("value", rot.interpolation)
+        self.rot_intp_combo.setProperty('value', rot.interpolation)
         self.rot_param_form_layout.setWidget(4, QtWidgets.QFormLayout.FieldRole, self.rot_intp_combo)
 
         self.rot_border_label = QtWidgets.QLabel(self.rot_param_form)
@@ -358,7 +452,7 @@ class PipelineWindow(QWidget):
         self.rot_param_form_layout.setWidget(5, QtWidgets.QFormLayout.LabelRole, self.rot_border_label)
         self.rot_border_combo = QtWidgets.QComboBox(self.rot_param_form)
         for opt in ['0', '1', '2', '3', '4']: self.rot_border_combo.addItem(opt)
-        self.rot_border_combo.setProperty("value", rot.border_mode)
+        self.rot_border_combo.setProperty('value', rot.border_mode)
         self.rot_param_form_layout.setWidget(5, QtWidgets.QFormLayout.FieldRole, self.rot_border_combo)
 
         self.rot_red_val_label = QtWidgets.QLabel(self.rot_param_form)
@@ -368,7 +462,7 @@ class PipelineWindow(QWidget):
         self.rot_red_var_box.setMaximum(255)
         self.rot_red_var_box.setMinimum(0)
         self.rot_red_var_box.setSingleStep(1)
-        self.rot_red_var_box.setProperty("value", rot.value[0])
+        self.rot_red_var_box.setProperty('value', rot.value[0])
         if rot.border_mode != 0: self.rot_red_var_box.setEnabled(False)
         self.rot_param_form_layout.setWidget(6, QtWidgets.QFormLayout.FieldRole, self.rot_red_var_box)
 
@@ -379,7 +473,7 @@ class PipelineWindow(QWidget):
         self.rot_blue_var_box.setMaximum(255)
         self.rot_blue_var_box.setMinimum(0)
         self.rot_blue_var_box.setSingleStep(1)
-        self.rot_blue_var_box.setProperty("value", rot.value[1])
+        self.rot_blue_var_box.setProperty('value', rot.value[1])
         if rot.border_mode != 0: self.rot_blue_var_box.setEnabled(False)
         self.rot_param_form_layout.setWidget(7, QtWidgets.QFormLayout.FieldRole, self.rot_blue_var_box)
 
@@ -390,7 +484,7 @@ class PipelineWindow(QWidget):
         self.rot_green_var_box.setMaximum(255)
         self.rot_green_var_box.setMinimum(0)
         self.rot_green_var_box.setSingleStep(1)
-        self.rot_green_var_box.setProperty("value", rot.value[2])
+        self.rot_green_var_box.setProperty('value', rot.value[2])
         if rot.border_mode != 0: self.rot_green_var_box.setEnabled(False)
         self.rot_param_form_layout.setWidget(8, QtWidgets.QFormLayout.FieldRole, self.rot_green_var_box)
 
@@ -399,15 +493,219 @@ class PipelineWindow(QWidget):
 
     def setupCutOutView(self):
         cut = ac.CutOutParams()
-        
+
+        self.cut_param_form = QtWidgets.QWidget(self)
+        self.cut_param_form.setGeometry(QtCore.QRect(20, 110, 300, 200))
+
+        self.cut_param_form_layout = QtWidgets.QFormLayout(self.cut_param_form)
+        self.cut_param_form_layout.setContentsMargins(0, 0, 0, 0)
+
+        self.cut_true_box_label = QtWidgets.QLabel(self.cut_param_form)
+        self.cut_true_box_label.setText('Always Apply:')
+        self.cut_param_form_layout.setWidget(0, QtWidgets.QFormLayout.LabelRole, self.cut_true_box_label)
+        self.cut_true_box = QtWidgets.QCheckBox(self.cut_param_form)
+        self.cut_true_box.setChecked(cut.always_apply)
+        self.cut_param_form_layout.setWidget(0, QtWidgets.QFormLayout.FieldRole, self.cut_true_box)
+
+        self.cut_prob_label = QtWidgets.QLabel(self.cut_param_form)
+        self.cut_prob_label.setText('Probability (unit interval): ')
+        self.cut_param_form_layout.setWidget(1, QtWidgets.QFormLayout.LabelRole, self.cut_prob_label)
+        self.cut_prob_box = QtWidgets.QDoubleSpinBox(self.cut_param_form)
+        self.cut_prob_box.setMaximum(1.0)
+        self.cut_prob_box.setMinimum(0.0)
+        self.cut_prob_box.setSingleStep(0.01)
+        self.cut_prob_box.setProperty('value', cut.p)
+        self.cut_param_form_layout.setWidget(1, QtWidgets.QFormLayout.FieldRole, self.cut_prob_box)
+
+        self.numholes_label = QtWidgets.QLabel(self.cut_param_form)
+        self.numholes_label.setText('Number of Holes:')
+        self.cut_param_form_layout.setWidget(2, QtWidgets.QFormLayout.LabelRole, self.numholes_label)
+        self.numholes_box = QtWidgets.QSpinBox(self.cut_param_form)
+        self.numholes_box.setMaximum(100)
+        self.numholes_box.setMinimum(1)
+        self.numholes_box.setSingleStep(1)
+        self.numholes_box.setProperty('value', cut.num_holes)
+        self.cut_param_form_layout.setWidget(2, QtWidgets.QFormLayout.FieldRole, self.numholes_box)
+
+        self.maxh_label = QtWidgets.QLabel(self.cut_param_form)
+        self.maxh_label.setText('Maximum Height:')
+        self.cut_param_form_layout.setWidget(3, QtWidgets.QFormLayout.LabelRole, self.maxh_label)
+        self.maxh_box = QtWidgets.QSpinBox(self.cut_param_form)
+        self.maxh_box.setMaximum(100)
+        self.maxh_box.setMinimum(1)
+        self.maxh_box.setSingleStep(1)
+        self.maxh_box.setProperty('value', cut.max_h_size)
+        self.cut_param_form_layout.setWidget(3, QtWidgets.QFormLayout.FieldRole, self.maxh_box)
+
+        self.maxw_label = QtWidgets.QLabel(self.cut_param_form)
+        self.maxw_label.setText('Maximum Width:')
+        self.cut_param_form_layout.setWidget(4, QtWidgets.QFormLayout.LabelRole, self.maxw_label)
+        self.maxw_box = QtWidgets.QSpinBox(self.cut_param_form)
+        self.maxw_box.setMaximum(100)
+        self.maxw_box.setMinimum(1)
+        self.maxw_box.setSingleStep(1)
+        self.maxw_box.setProperty('value', cut.max_w_size)
+        self.cut_param_form_layout.setWidget(4, QtWidgets.QFormLayout.FieldRole, self.maxw_box)
+
+        self.cut_param_form.setVisible(True)
 
 
     def setupCropView(self):
-        pass
+        crop = ac.CropParams()
+
+        self.crop_param_form = QtWidgets.QWidget(self)
+        self.crop_param_form.setGeometry(QtCore.QRect(20, 110, 300, 200))
+
+        self.crop_param_form_layout = QtWidgets.QFormLayout(self.crop_param_form)
+        self.crop_param_form_layout.setContentsMargins(0, 0, 0, 0)
+
+        self.crop_true_box_label = QtWidgets.QLabel(self.crop_param_form)
+        self.crop_true_box_label.setText('Always Apply:')
+        self.crop_param_form_layout.setWidget(0, QtWidgets.QFormLayout.LabelRole, self.crop_true_box_label)
+        self.crop_true_box = QtWidgets.QCheckBox(self.crop_param_form)
+        self.crop_true_box.setChecked(crop.always_apply)
+        self.crop_param_form_layout.setWidget(0, QtWidgets.QFormLayout.FieldRole, self.crop_true_box)
+
+        self.crop_prob_label = QtWidgets.QLabel(self.crop_param_form)
+        self.crop_prob_label.setText('Probability (unit interval): ')
+        self.crop_param_form_layout.setWidget(1, QtWidgets.QFormLayout.LabelRole, self.crop_prob_label)
+        self.crop_prob_box = QtWidgets.QDoubleSpinBox(self.crop_param_form)
+        self.crop_prob_box.setMaximum(1.0)
+        self.crop_prob_box.setMinimum(0.0)
+        self.crop_prob_box.setSingleStep(0.01)
+        self.crop_prob_box.setProperty('value', crop.p)
+        self.crop_param_form_layout.setWidget(1, QtWidgets.QFormLayout.FieldRole, self.crop_prob_box)
+
+        self.xmin_label = QtWidgets.QLabel(self.crop_param_form)
+        self.xmin_label.setText('xmin:')
+        self.crop_param_form_layout.setWidget(2, QtWidgets.QFormLayout.LabelRole, self.xmin_label)
+        self.xmin_box = QtWidgets.QSpinBox(self.crop_param_form)
+        self.xmin_box.setMaximum(1000)
+        self.xmin_box.setMinimum(0)
+        self.xmin_box.setSingleStep(1)
+        self.xmin_box.setProperty('value', crop.x_min)
+        self.crop_param_form_layout.setWidget(2, QtWidgets.QFormLayout.FieldRole, self.xmin_box)
+
+        self.xmax_label = QtWidgets.QLabel(self.crop_param_form)
+        self.xmax_label.setText('xmax:')
+        self.crop_param_form_layout.setWidget(3, QtWidgets.QFormLayout.LabelRole, self.xmax_label)
+        self.xmax_box = QtWidgets.QSpinBox(self.crop_param_form)
+        self.xmax_box.setMaximum(1000)
+        self.xmax_box.setMinimum(0)
+        self.xmax_box.setSingleStep(1)
+        self.xmax_box.setProperty('value', crop.x_max)
+        self.crop_param_form_layout.setWidget(3, QtWidgets.QFormLayout.FieldRole, self.xmax_box)
+
+        self.ymin_label = QtWidgets.QLabel(self.crop_param_form)
+        self.ymin_label.setText('ymin:')
+        self.crop_param_form_layout.setWidget(4, QtWidgets.QFormLayout.LabelRole, self.ymin_label)
+        self.ymin_box = QtWidgets.QSpinBox(self.crop_param_form)
+        self.ymin_box.setMaximum(1000)
+        self.ymin_box.setMinimum(0)
+        self.ymin_box.setSingleStep(1)
+        self.ymin_box.setProperty('value', crop.y_min)
+        self.crop_param_form_layout.setWidget(4, QtWidgets.QFormLayout.FieldRole, self.ymin_box)
+
+        self.ymax_label = QtWidgets.QLabel(self.crop_param_form)
+        self.ymax_label.setText('ymax:')
+        self.crop_param_form_layout.setWidget(5, QtWidgets.QFormLayout.LabelRole, self.ymax_label)
+        self.ymax_box = QtWidgets.QSpinBox(self.crop_param_form)
+        self.ymax_box.setMaximum(1000)
+        self.ymax_box.setMinimum(0)
+        self.ymax_box.setSingleStep(1)
+        self.ymax_box.setProperty('value', crop.y_max)
+        self.crop_param_form_layout.setWidget(5, QtWidgets.QFormLayout.FieldRole, self.ymax_box)
+
+        self.crop_param_form.setVisible(True)
 
 
     def setupRgbView(self):
-        pass
+        rgb = ac.RgbShiftParams()
+
+        self.rgb_param_form = QtWidgets.QWidget(self)
+        self.rgb_param_form.setGeometry(QtCore.QRect(20, 110, 300, 200))
+
+        self.rgb_param_form_layout = QtWidgets.QFormLayout(self.rgb_param_form)
+        self.rgb_param_form_layout.setContentsMargins(0, 0, 0, 0)
+
+        self.rgb_true_box_label = QtWidgets.QLabel(self.rgb_param_form)
+        self.rgb_true_box_label.setText('Always Apply:')
+        self.rgb_param_form_layout.setWidget(0, QtWidgets.QFormLayout.LabelRole, self.rgb_true_box_label)
+        self.rgb_true_box = QtWidgets.QCheckBox(self.rgb_param_form)
+        self.rgb_true_box.setChecked(rgb.always_apply)
+        self.rgb_param_form_layout.setWidget(0, QtWidgets.QFormLayout.FieldRole, self.rgb_true_box)
+
+        self.rgb_prob_label = QtWidgets.QLabel(self.rgb_param_form)
+        self.rgb_prob_label.setText('Probability (unit interval): ')
+        self.rgb_param_form_layout.setWidget(1, QtWidgets.QFormLayout.LabelRole, self.rgb_prob_label)
+        self.rgb_prob_box = QtWidgets.QDoubleSpinBox(self.rgb_param_form)
+        self.rgb_prob_box.setMaximum(1.0)
+        self.rgb_prob_box.setMinimum(0.0)
+        self.rgb_prob_box.setSingleStep(0.01)
+        self.rgb_prob_box.setProperty('value', rgb.p)
+        self.rgb_param_form_layout.setWidget(1, QtWidgets.QFormLayout.FieldRole, self.rgb_prob_box)
+
+        self.red_shift_lower_label = QtWidgets.QLabel(self.rgb_param_form)
+        self.red_shift_lower_label.setText('Lower Red Shift Limit:')
+        self.rgb_param_form_layout.setWidget(2, QtWidgets.QFormLayout.LabelRole, self.red_shift_lower_label)
+        self.red_shift_lower_box = QtWidgets.QSpinBox(self.rgb_param_form)
+        self.red_shift_lower_box.setMaximum(255)
+        self.red_shift_lower_box.setMinimum(-255)
+        self.red_shift_lower_box.setSingleStep(1)
+        self.red_shift_lower_box.setProperty('value', rgb.r_shift_limit[0])
+        self.rgb_param_form_layout.setWidget(2, QtWidgets.QFormLayout.FieldRole, self.red_shift_lower_box)
+
+        self.red_shift_upper_label = QtWidgets.QLabel(self.rgb_param_form)
+        self.red_shift_upper_label.setText('Upper Red Shift Limit:')
+        self.rgb_param_form_layout.setWidget(3, QtWidgets.QFormLayout.LabelRole, self.red_shift_upper_label)
+        self.red_shift_upper_box = QtWidgets.QSpinBox(self.rgb_param_form)
+        self.red_shift_upper_box.setMaximum(255)
+        self.red_shift_upper_box.setMinimum(-255)
+        self.red_shift_upper_box.setSingleStep(1)
+        self.red_shift_upper_box.setProperty('value', rgb.r_shift_limit[1])
+        self.rgb_param_form_layout.setWidget(3, QtWidgets.QFormLayout.FieldRole, self.red_shift_upper_box)
+
+        self.green_shift_lower_label = QtWidgets.QLabel(self.rgb_param_form)
+        self.green_shift_lower_label.setText('Lower Green Shift Limit:')
+        self.rgb_param_form_layout.setWidget(4, QtWidgets.QFormLayout.LabelRole, self.green_shift_lower_label)
+        self.green_shift_lower_box = QtWidgets.QSpinBox(self.rgb_param_form)
+        self.green_shift_lower_box.setMaximum(255)
+        self.green_shift_lower_box.setMinimum(-255)
+        self.green_shift_lower_box.setSingleStep(1)
+        self.green_shift_lower_box.setProperty('value', rgb.g_shift_limit[0])
+        self.rgb_param_form_layout.setWidget(4, QtWidgets.QFormLayout.FieldRole, self.green_shift_lower_box)
+        
+        self.green_shift_upper_label = QtWidgets.QLabel(self.rgb_param_form)
+        self.green_shift_upper_label.setText('Upper Green Shift Limit:')
+        self.rgb_param_form_layout.setWidget(5, QtWidgets.QFormLayout.LabelRole, self.green_shift_upper_label)
+        self.green_shift_upper_box = QtWidgets.QSpinBox(self.rgb_param_form)
+        self.green_shift_upper_box.setMaximum(255)
+        self.green_shift_upper_box.setMinimum(-255)
+        self.green_shift_upper_box.setSingleStep(1)
+        self.green_shift_upper_box.setProperty('value', rgb.g_shift_limit[1])
+        self.rgb_param_form_layout.setWidget(5, QtWidgets.QFormLayout.FieldRole, self.green_shift_upper_box)
+
+        self.blue_shift_lower_label = QtWidgets.QLabel(self.rgb_param_form)
+        self.blue_shift_lower_label.setText('Lower Blue Shift Limit:')
+        self.rgb_param_form_layout.setWidget(6, QtWidgets.QFormLayout.LabelRole, self.blue_shift_lower_label)
+        self.blue_shift_lower_box = QtWidgets.QSpinBox(self.rgb_param_form)
+        self.blue_shift_lower_box.setMaximum(255)
+        self.blue_shift_lower_box.setMinimum(-255)
+        self.blue_shift_lower_box.setSingleStep(1)
+        self.blue_shift_lower_box.setProperty('value', rgb.b_shift_limit[0])
+        self.rgb_param_form_layout.setWidget(6, QtWidgets.QFormLayout.FieldRole, self.blue_shift_lower_box)
+        
+        self.blue_shift_upper_label = QtWidgets.QLabel(self.rgb_param_form)
+        self.blue_shift_upper_label.setText('Upper Blue Shift Limit:')
+        self.rgb_param_form_layout.setWidget(7, QtWidgets.QFormLayout.LabelRole, self.blue_shift_upper_label)
+        self.blue_shift_upper_box = QtWidgets.QSpinBox(self.rgb_param_form)
+        self.blue_shift_upper_box.setMaximum(255)
+        self.blue_shift_upper_box.setMinimum(-255)
+        self.blue_shift_upper_box.setSingleStep(1)
+        self.blue_shift_upper_box.setProperty('value', rgb.b_shift_limit[1])
+        self.rgb_param_form_layout.setWidget(7, QtWidgets.QFormLayout.FieldRole, self.blue_shift_upper_box)
+
+        self.rgb_param_form.setVisible(True)
 
 
 class MainWindow(QMainWindow):
@@ -567,6 +865,6 @@ images in the selected directory it must be applied to.''')
 app = QApplication(sys.argv)
 win = MainWindow()
 win2 = PipelineWindow('sample', win)
-#win.show()
+# win.show()
 win2.show()
 sys.exit(app.exec_())

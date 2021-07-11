@@ -1,6 +1,5 @@
 class HorizontalFlipParams():
     def __init__(self):
-        # self.p = 1.0
         self.setDefault()
 
 

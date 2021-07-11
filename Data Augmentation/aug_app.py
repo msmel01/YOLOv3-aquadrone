@@ -3,6 +3,11 @@ from PyQt5.QtWidgets import QApplication, QMainWindow, QMessageBox, QWidget
 import sys
 import aug_classes as ac 
 
+# TODO:
+# Add sanity checks for spinboxes
+# Add warning box when terminate is pressed
+# Add percentage of images option
+
 class PipelineWindow(QWidget):
     def __init__(self, default_name, parent):
         super(QWidget, self).__init__()
@@ -440,6 +445,26 @@ class PipelineWindow(QWidget):
 
         self.iso_param_form.setVisible(False)
 
+    
+    def setIsoNoiseApply(self): self.aug_param[2].always_apply = self.iso_true_box.isChecked()
+
+
+    def setIsoNoiseProb(self): self.aug_param[2].p = self.iso_prob_box.value()
+
+
+    def setIsoNoiseLowerIntensity(self): self.aug_param[2].intensity[0] = self.iso_intensity_lower_box.value()
+
+
+    def setIsoNoiseUpperIntensity(self): self.aug_param[2].intensity[1] = self.iso_intensity_upper_box.value()
+
+
+    def setIsoNoiseLowerColorShift(self): self.aug_param[2].color_shift[0] = self.iso_color_lower_box.value()
+
+
+    def setIsoNoiseUpperColorShift(self): self.aug_param[2].color_shift[1] = self.iso_color_upper_box.value()
+
+
+    #################################### Rotate #####################################################
 
     def setupRotateView(self):
         rot = ac.RotateParams()
@@ -539,6 +564,35 @@ class PipelineWindow(QWidget):
         self.rot_param_form.setVisible(False)
 
 
+    def setRotateApply(self): self.aug_param[3].always_apply = self.rot_true_box.isChecked()
+
+
+    def setRotateProb(self): self.aug_param[3].p = self.rot_prob_box.value()
+
+
+    def setRotateLowerLimit(self): self.aug_param[3].limit[0] = self.rot_angle_lower_box.value()
+
+
+    def setRotateUpperLimit(self): self.aug_param[3].limit[1] = self.rot_angle_upper_box.value()
+
+
+    def setRotateInter(self): self.aug_param[3].interpolation = self.rot_intp_combo.currentIndex()
+
+
+    def setRotateBorderMode(self): self.aug_param[3].border_mode = self.rot_border_combo.currentIndex()
+
+
+    def setRotateRedValue(self): self.aug_param[3].value[0] = self.rot_red_var_box.value()
+
+    
+    def setRotateGreenValue(self): self.aug_param[3].value[1] = self.rot_green_var_box.value()
+
+
+    def setRotateBlueValue(self): self.aug_param[3].value[2] = self.rot_blue_var_box.value()
+
+
+    #################################### Cut Out #####################################################
+
     def setupCutOutView(self):
         cut = ac.CutOutParams()
 
@@ -597,6 +651,23 @@ class PipelineWindow(QWidget):
 
         self.cut_param_form.setVisible(False)
 
+    
+    def setCutOutApply(self): self.aug_param[4].always_apply = self.cut_true_box.isChecked()
+
+
+    def setCutOutProb(self): self.aug_param[4].p = self.cut_prob_box.value()
+
+
+    def setCutOutNumHoles(self): self.aug_param[4].num_holes = self.numholes_box.value()
+
+
+    def setCutOutMaxH(self): self.aug_param[4].max_h_size = self.maxh_box.value()
+
+
+    def setCutOutMaxW(self): self.aug_param[4].max_w_size = self.maxw_box.value()
+
+
+    #################################### Crop #####################################################
 
     def setupCropView(self):
         crop = ac.CropParams()
@@ -666,6 +737,26 @@ class PipelineWindow(QWidget):
 
         self.crop_param_form.setVisible(False)
 
+
+    def setCropApply(self): self.aug_param[5].always_apply = self.crop_true_box.isChecked()
+
+
+    def setCropProb(self): self.aug_param[5].p = self.crop_prob_box.value()
+
+
+    def setCropXmin(self): self.aug_param[5].x_min = self.xmin_box.value()
+
+
+    def setCropXmax(self): self.aug_param[5].x_max = self.xmax_box.value()
+
+
+    def setCropYmin(self): self.aug_param[5].y_min = self.ymin_box.value()
+
+
+    def setCropYmax(self): self.aug_param[5].y_max = self.ymax_box.value()
+
+
+    #################################### Rgb Shift ####################################################
 
     def setupRgbView(self):
         rgb = ac.RgbShiftParams()
@@ -756,6 +847,30 @@ class PipelineWindow(QWidget):
         self.rgb_param_form.setVisible(False)
 
 
+    def setRgbApply(self): self.aug_param[6].always_apply = self.rgb_true_box.isChecked()
+
+
+    def setRgbProb(self): self.aug_param[6].p = self.rgb_prob_box.value()
+
+
+    def setRedShiftLower(self): self.aug_param[6].r_shift_limit[0] = self.red_shift_lower_box.value()
+
+
+    def setRedShiftUpper(self): self.aug_param[6].r_shift_limit[1] = self.red_shift_upper_box.value()
+
+
+    def setGreenShiftLower(self): self.aug_param[6].g_shift_limit[0] = self.green_shift_lower_box.value()
+
+
+    def setGreenShiftUpper(self): self.aug_param[6].g_shift_limit[1] = self.green_shift_upper_box.value()
+
+
+    def setBlueShiftLower(self): self.aug_param[6].b_shift_limit[0] = self.blue_shift_lower_box.value()
+
+
+    def setBlueShiftUpper(self): self.aug_param[6].b_shift_limit[0] = self.blue_shift_upper_box.value()
+
+
 class MainWindow(QMainWindow):
     def __init__(self):
         super(MainWindow, self).__init__()
@@ -797,9 +912,7 @@ class MainWindow(QMainWindow):
         self.data_aug_add_label = QtWidgets.QLabel(self)
         self.data_aug_add_label.setGeometry(20, 90, 650, 50)
         self.data_aug_add_label.setObjectName('data_aug_add_label')
-        self.data_aug_add_label.setText(
-        '''Press \'Create\' to create a new data augmentation pipeline and select what percentage of 
-images in the selected directory it must be applied to.''')
+        self.data_aug_add_label.setText("Press 'Create' to create a new data augmentation pipeline and select what percentage of \n images in the selected directory it must be applied to.")
         # cancel button
         self.cancel_button = QtWidgets.QPushButton(self)
         self.cancel_button.setGeometry(460, 445, 100, 30)

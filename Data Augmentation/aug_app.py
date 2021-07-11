@@ -13,7 +13,7 @@ class PipelineWindow(QWidget):
         self.aug_names = ['Horizontal Flip', 'Motion Blur', 'ISO Noise', 'Rotate',
                             'Cutout', 'Crop', 'RGB Shift']
         parentTopLeft = parent.geometry().topLeft()
-        self.setGeometry(parentTopLeft.x() + 100, parentTopLeft.y() + 100, 600, 350)
+        self.setGeometry(parentTopLeft.x() + 100, parentTopLeft.y() + 100, 600, 450)
         self.setWindowTitle('Pipeline configuration window')
         self.setupUi()
 
@@ -64,12 +64,10 @@ class PipelineWindow(QWidget):
     def updateUi(self): # updates UI by 
         selected_aug = self.aug_combo_box.currentIndex()
 
-        if self.prev_aug == 0: self.hf_param_form.setVisible(False)
-        elif self.prev_aug == 1: self.mb_param_form.setVisible(False) 
-        elif selected_aug == 2: # iso noise
-            pass
-        elif selected_aug == 3: # rotate
-            pass
+        if self.prev_aug == 0 and self.prev_aug != selected_aug: self.hf_param_form.setVisible(False)
+        elif self.prev_aug == 1 and self.prev_aug != selected_aug: self.mb_param_form.setVisible(False) 
+        elif self.prev_aug == 2 and self.prev_aug != selected_aug: self.iso_param_form.setVisible(False)
+        elif self.prev_aug == 3 and self.prev_aug != selected_aug: self.rot_param_form.setVisible(False)
         elif selected_aug == 4: # cutout
             pass
         elif selected_aug == 5: # crop
@@ -97,9 +95,31 @@ class PipelineWindow(QWidget):
             self.mb_blur_lower_box.setValue(mb.blur_limit[0])
 
         elif selected_aug == 2: # iso noise
-            pass
+            iso = ac.IsoNoiseParams()
+            self.iso_true_box.setChecked(iso.always_apply)
+            self.iso_prob_box.setProperty("value", iso.p)
+            self.iso_intensity_lower_box.setProperty("value", iso.intensity[0])
+            self.iso_intensity_upper_box.setProperty("value", iso.intensity[1])
+            self.iso_color_lower_box.setProperty("value", iso.color_shift[0])
+            self.iso_color_upper_box.setProperty("value", iso.color_shift[1])
+            self.iso_param_form.setVisible(True)
+
         elif selected_aug == 3: # rotate
-            pass
+            rot = ac.RotateParams()
+            self.rot_angle_lower_box.setProperty("value", rot.limit[0])
+            self.rot_angle_upper_box.setProperty("value", rot.limit[1])
+            self.rot_intp_combo.setProperty("value", rot.interpolation)
+            self.rot_border_combo.setProperty("value", rot.border_mode)
+            self.rot_red_var_box.setProperty("value", rot.value[0])
+            if rot.border_mode != 0: self.rot_red_var_box.setEnabled(False)
+            self.rot_blue_var_box.setProperty("value", rot.value[1])
+            if rot.border_mode != 0: self.rot_blue_var_box.setEnabled(False)
+            self.rot_green_var_box.setProperty("value", rot.value[2])
+            if rot.border_mode != 0: self.rot_green_var_box.setEnabled(False)
+            self.rot_param_form.setVisible(True)
+            self.rot_true_box.setChecked(rot.always_apply)
+            self.rot_prob_box.setProperty("value", rot.p)
+
         elif selected_aug == 4: # cutout
             pass
         elif selected_aug == 5: # crop
@@ -111,7 +131,6 @@ class PipelineWindow(QWidget):
 
 
     def addAug(self):
-        # self.aug_combo_box.activated.connect(lambda: self.showParams())
         selected_aug = self.aug_combo_box.currentIndex()
         self.aug_objects[selected_aug] = 1
         self.prev_aug = selected_aug
@@ -126,7 +145,8 @@ class PipelineWindow(QWidget):
             self.setupIsoNoiseView()
 
         elif selected_aug == 3: # rotate
-            pass
+            self.setupRotateView()
+
         elif selected_aug == 4: # cutout
             pass
         elif selected_aug == 5: # crop
@@ -280,11 +300,106 @@ class PipelineWindow(QWidget):
 
 
     def setupRotateView(self):
-        pass
+        rot = ac.RotateParams()
+
+        self.rot_param_form = QtWidgets.QWidget(self)
+        self.rot_param_form.setGeometry(QtCore.QRect(20, 110, 300, 300))
+
+        self.rot_param_form_layout = QtWidgets.QFormLayout(self.rot_param_form)
+        self.rot_param_form_layout.setContentsMargins(0, 0, 0, 0)
+
+        self.rot_true_box_label = QtWidgets.QLabel(self.rot_param_form)
+        self.rot_true_box_label.setText('Always Apply:')
+        self.rot_param_form_layout.setWidget(0, QtWidgets.QFormLayout.LabelRole, self.rot_true_box_label)
+        self.rot_true_box = QtWidgets.QCheckBox(self.rot_param_form)
+        self.rot_true_box.setChecked(rot.always_apply)
+        self.rot_param_form_layout.setWidget(0, QtWidgets.QFormLayout.FieldRole, self.rot_true_box)
+
+        self.rot_prob_label = QtWidgets.QLabel(self.rot_param_form)
+        self.rot_prob_label.setText('Probability (unit interval): ')
+        self.rot_param_form_layout.setWidget(1, QtWidgets.QFormLayout.LabelRole, self.rot_prob_label)
+        self.rot_prob_box = QtWidgets.QDoubleSpinBox(self.rot_param_form)
+        self.rot_prob_box.setMaximum(1.0)
+        self.rot_prob_box.setMinimum(0.0)
+        self.rot_prob_box.setSingleStep(0.01)
+        self.rot_prob_box.setProperty("value", rot.p)
+        self.rot_param_form_layout.setWidget(1, QtWidgets.QFormLayout.FieldRole, self.rot_prob_box)
+
+        self.rot_angle_lower_label = QtWidgets.QLabel(self.rot_param_form)
+        self.rot_angle_lower_label.setText('Rotate Angle Lower Limit:')
+        self.rot_param_form_layout.setWidget(2, QtWidgets.QFormLayout.LabelRole, self.rot_angle_lower_label)
+        self.rot_angle_lower_box = QtWidgets.QDoubleSpinBox(self.rot_param_form)
+        self.rot_angle_lower_box.setMaximum(360)
+        self.rot_angle_lower_box.setMinimum(-360)
+        self.rot_angle_lower_box.setSingleStep(1)
+        self.rot_angle_lower_box.setProperty("value", rot.limit[0])
+        self.rot_param_form_layout.setWidget(2, QtWidgets.QFormLayout.FieldRole, self.rot_angle_lower_box)
+        
+        self.rot_angle_upper_label = QtWidgets.QLabel(self.rot_param_form)
+        self.rot_angle_upper_label.setText('Rotate Angle Upper Limit:')
+        self.rot_param_form_layout.setWidget(3, QtWidgets.QFormLayout.LabelRole, self.rot_angle_upper_label)
+        self.rot_angle_upper_box = QtWidgets.QDoubleSpinBox(self.rot_param_form)
+        self.rot_angle_upper_box.setMaximum(360)
+        self.rot_angle_upper_box.setMinimum(-360)
+        self.rot_angle_upper_box.setSingleStep(0.01)
+        self.rot_angle_upper_box.setProperty("value", rot.limit[1])
+        self.rot_param_form_layout.setWidget(3, QtWidgets.QFormLayout.FieldRole, self.rot_angle_upper_box)
+
+        self.rot_intp_label = QtWidgets.QLabel(self.rot_param_form)
+        self.rot_intp_label.setText('Interpolation:')
+        self.rot_param_form_layout.setWidget(4, QtWidgets.QFormLayout.LabelRole, self.rot_intp_label)
+        self.rot_intp_combo = QtWidgets.QComboBox(self.rot_param_form)
+        for opt in ['0', '1', '2', '3', '4']: self.rot_intp_combo.addItem(opt)
+        self.rot_intp_combo.setProperty("value", rot.interpolation)
+        self.rot_param_form_layout.setWidget(4, QtWidgets.QFormLayout.FieldRole, self.rot_intp_combo)
+
+        self.rot_border_label = QtWidgets.QLabel(self.rot_param_form)
+        self.rot_border_label.setText('Border Mode:')
+        self.rot_param_form_layout.setWidget(5, QtWidgets.QFormLayout.LabelRole, self.rot_border_label)
+        self.rot_border_combo = QtWidgets.QComboBox(self.rot_param_form)
+        for opt in ['0', '1', '2', '3', '4']: self.rot_border_combo.addItem(opt)
+        self.rot_border_combo.setProperty("value", rot.border_mode)
+        self.rot_param_form_layout.setWidget(5, QtWidgets.QFormLayout.FieldRole, self.rot_border_combo)
+
+        self.rot_red_val_label = QtWidgets.QLabel(self.rot_param_form)
+        self.rot_red_val_label.setText('Red Padding Value:')
+        self.rot_param_form_layout.setWidget(6, QtWidgets.QFormLayout.LabelRole, self.rot_red_val_label)
+        self.rot_red_var_box = QtWidgets.QSpinBox(self.rot_param_form)
+        self.rot_red_var_box.setMaximum(255)
+        self.rot_red_var_box.setMinimum(0)
+        self.rot_red_var_box.setSingleStep(1)
+        self.rot_red_var_box.setProperty("value", rot.value[0])
+        if rot.border_mode != 0: self.rot_red_var_box.setEnabled(False)
+        self.rot_param_form_layout.setWidget(6, QtWidgets.QFormLayout.FieldRole, self.rot_red_var_box)
+
+        self.rot_blue_val_label = QtWidgets.QLabel(self.rot_param_form)
+        self.rot_blue_val_label.setText('Blue Padding Value:')
+        self.rot_param_form_layout.setWidget(7, QtWidgets.QFormLayout.LabelRole, self.rot_blue_val_label)
+        self.rot_blue_var_box = QtWidgets.QSpinBox(self.rot_param_form)
+        self.rot_blue_var_box.setMaximum(255)
+        self.rot_blue_var_box.setMinimum(0)
+        self.rot_blue_var_box.setSingleStep(1)
+        self.rot_blue_var_box.setProperty("value", rot.value[1])
+        if rot.border_mode != 0: self.rot_blue_var_box.setEnabled(False)
+        self.rot_param_form_layout.setWidget(7, QtWidgets.QFormLayout.FieldRole, self.rot_blue_var_box)
+
+        self.rot_green_val_label = QtWidgets.QLabel(self.rot_param_form)
+        self.rot_green_val_label.setText('Green Padding Value:')
+        self.rot_param_form_layout.setWidget(8, QtWidgets.QFormLayout.LabelRole, self.rot_green_val_label)
+        self.rot_green_var_box = QtWidgets.QSpinBox(self.rot_param_form)
+        self.rot_green_var_box.setMaximum(255)
+        self.rot_green_var_box.setMinimum(0)
+        self.rot_green_var_box.setSingleStep(1)
+        self.rot_green_var_box.setProperty("value", rot.value[2])
+        if rot.border_mode != 0: self.rot_green_var_box.setEnabled(False)
+        self.rot_param_form_layout.setWidget(8, QtWidgets.QFormLayout.FieldRole, self.rot_green_var_box)
+
+        self.rot_param_form.setVisible(True)
 
 
     def setupCutOutView(self):
-        pass
+        cut = ac.CutOutParams()
+        
 
 
     def setupCropView(self):

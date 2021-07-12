@@ -1,74 +1,98 @@
+from os import pipe
 import cv2
 import albumentations as A
 import argparse
 import os.path
+import aug_classes as ac
 
 # TODO:
 # experiment and find best values for the arguments
 # add support for bounding boxes
-# find a way to randomly sample images for data augmentation
-# combinations of data augmentation techniques
-# implement a GUI
+# randomly sample images for data augmentation
 
-def horizontalFlip(image, name, dirname):
-    transform = A.Compose([A.HorizontalFlip(p=1.0)])
-    aug_image = transform(image=image)['image']
-    img_name = dirname + '/{}_hflip.jpg'.format(name)
-    cv2.imwrite(img_name, aug_image)
+class Augmentor():
+    def __init__(self, img_dir):
+        self.img_dir = img_dir
+        self.pipelines = {}
+
+    def createPipeline(self, pipeline_name, pipeline_config):
+        print('Creating pipeline \'{}\''.format(pipeline_name))
+        trans_list = []
+
+        for i in range(7):
+            if pipeline_config.aug_oneh[i] == False:
+                continue
+
+            if i == 0: # horizontal flip
+                print('Add horizontal flip')
+                trans_list.append(A.HorizontalFlip(always_apply=pipeline_config.aug_param[0].always_apply,
+                                                   p=pipeline_config.aug_param[0].p))
+
+            elif i == 1: # motion blur
+                print('Add motion blur')
+                bl = (pipeline_config.aug_param[1].blur_limit[0], pipeline_config.aug_param[1].blur_limit[1])
+                trans_list.append(A.MotionBlur(always_apply=pipeline_config.aug_param[1].always_apply,
+                                               p=pipeline_config.aug_param[1].p,
+                                               blur_limit=bl))
+
+            elif i == 2: # iso noise
+                print('Add iso noise')
+                inty = (pipeline_config.aug_param[2].intensity[0], pipeline_config.aug_param[2].intensity[1])
+                cs = (pipeline_config.aug_param[2].color_shift[0], pipeline_config.aug_param[2].color_shift[1])
+                trans_list.append(A.ISONoise(always_apply=pipeline_config.aug_param[2].always_apply,
+                                            p=pipeline_config.aug_param[2].p,
+                                            intensity=inty, 
+                                            color_shift=cs))
+
+            elif i == 3: # rotate
+                print('Add rotate')
+                lmt = (pipeline_config.aug_param[3].limit[0], pipeline_config.aug_param[3].limit[1])
+                val = [pipeline_config.aug_param[3].value[0],
+                       pipeline_config.aug_param[3].value[1],
+                       pipeline_config.aug_param[3].value[2]]
+                trans_list.append(A.Rotate(always_apply=pipeline_config.aug_param[3].always_apply,
+                                           p=pipeline_config.aug_param[3].p,
+                                           limit=lmt, 
+                                           interpolation=pipeline_config.aug_param[3].interpolation,
+                                           border_mode=pipeline_config.aug_param[3].border_mode,
+                                           value=val,
+                                           mask_value=pipeline_config.aug_param[3].mask_value))
+
+            elif i == 4: # cutout
+                print('Add cutout')
+                trans_list.append(A.Cutout(always_apply=pipeline_config.aug_param[4].always_apply,
+                                           p=pipeline_config.aug_param[4].p,
+                                           num_holes=pipeline_config.aug_param[4].num_holes,
+                                           max_h_size=pipeline_config.aug_param[4].max_h_size,
+                                           max_w_size=pipeline_config.aug_param[4].max_w_size))
+
+            elif i == 5: # crop
+                print('Add crop')
+                trans_list.append(A.Crop(always_apply=pipeline_config.aug_param[5].always_apply,
+                                         p=pipeline_config.aug_param[5].p,
+                                         x_min=pipeline_config.aug_param[5].x_min,
+                                         y_min=pipeline_config.aug_param[5].y_min,
+                                         x_max=pipeline_config.aug_param[5].x_max,
+                                         y_max=pipeline_config.aug_param[5].y_max))
+
+            else: # rgb shift
+                print('Add rgb shift')
+                rshift = (pipeline_config.aug_param[6].r_shift_limit[0], pipeline_config.aug_param[6].r_shift_limit[1])
+                gshift = (pipeline_config.aug_param[6].g_shift_limit[0], pipeline_config.aug_param[6].g_shift_limit[1])
+                bshift = (pipeline_config.aug_param[6].b_shift_limit[0], pipeline_config.aug_param[6].b_shift_limit[1])
+                trans_list.append(A.RGBShift(always_apply=pipeline_config.aug_param[6].always_apply,
+                                             p=pipeline_config.aug_param[6].p,
+                                             r_shift_limit=rshift,
+                                             g_shift_limit=gshift, 
+                                             b_shift_limit=bshift))
+
+        self.pipelines[pipeline_name] = (pipeline_config.img_percent, trans_list)
+        print('***************** Done creating {} *****************'.format(pipeline_name))
 
 
-def motionBlur(image, name, dirname):
-    transform = A.Compose([A.MotionBlur(always_apply=False, p=1.0, blur_limit=(10, 20))])
-    aug_image = transform(image=image)['image']
-    img_name = dirname + '/{}_mblur.jpg'.format(name)
-    cv2.imwrite(img_name, aug_image)
-
-
-def isoNoise(image, name, dirname):
-    transform = A.Compose([A.ISONoise(always_apply=False, p=1.0, intensity=(0.6, 1), color_shift=(0.01, 0.05))])
-    aug_image = transform(image=image)['image']
-    img_name = dirname + '/{}_iso.jpg'.format(name)
-    cv2.imwrite(img_name, aug_image)
-
-
-def rotate(image, name, dirname):
-    transform = A.Compose([A.Rotate(always_apply=False, p=1.0, limit=(-45, 45), mask_value=None)])
-    aug_image = transform(image=image)['image']
-    img_name = dirname + '/{}_rotate.jpg'.format(name)
-    cv2.imwrite(img_name, aug_image)
-
-
-def cutout(image, name, dirname):
-    transform = A.Compose([A.Cutout(always_apply=False, p=1.0, num_holes=25, max_h_size=20, max_w_size=20)])
-    aug_image = transform(image=image)['image']
-    img_name = dirname + '/{}_cutout.jpg'.format(name)
-    cv2.imwrite(img_name, aug_image)
-
-
-
-def crop(image, name, dirname):
-    transform = A.Compose([A.Crop(always_apply=False, p=1.0, x_min=0, y_min=0, x_max=160, y_max=106)])
-    aug_image = transform(image=image)['image']
-    img_name = dirname + '/{}_crop.jpg'.format(name)
-    cv2.imwrite(img_name, aug_image)
-
-
-def rgbShift(image, name, dirname):
-    transform = A.RGBShift(always_apply=False, p=1.0, r_shift_limit=(-20, 20), g_shift_limit=(-20, 20), b_shift_limit=(-20, 20)) 
-    aug_image = transform(image=image)['image']
-    img_name = dirname + '/{}_rgb.jpg'.format(name)
-    cv2.imwrite(img_name, aug_image)
-
-
-if __name__ == '__main__':
-    ap = argparse.ArgumentParser()
-    ap.add_argument("-i", "--image", required=True, help="path to the image file")
-    args = vars(ap.parse_args())
-
-    image_path = args["image"]
-    image_name = os.path.basename(image_path)
-    image_name = image_name.split(".")[0]
-    image_dir = os.path.dirname(image_path)
-
-    image = cv2.imread(image_path)
-    image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+    def augment(self):
+        #     image_name = os.path.basename(image_path)
+        #     image_name = image_name.split(".")[0]
+        #     image_dir = os.path.dirname(image_path)]]
+        # img_name = dirname + '/{}_rgb.jpg'.format(name)
+        pass

@@ -4,6 +4,7 @@ class HorizontalFlipParams():
 
 
     def setDefault(self):
+        self.always_apply = False
         self.p = 1.0
 
 

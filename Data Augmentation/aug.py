@@ -95,27 +95,29 @@ class Augmentor():
 
     def augment(self):
         print('Preparing to augment images.')
-        image_list = np.array([])
+        image_list = []
 
         for file in os.listdir(self.img_dir): # load image names
-            file_ext = os.path.basename(file).split('.')[0]
+            file_ext = os.path.basename(file).split('.')[1]
             if file_ext != 'jpg':
                 continue
             image_list.append(file)
         
-        num_of_img = image_list.size()
+        image_list = np.array(image_list)
+        num_of_img = image_list.size
         target_dir = '{}/Aug/'.format(self.git_root)
+        if not os.path.exists(target_dir): os.makedirs(target_dir)
 
         for name, config in self.pipelines.items():
             image_per = config[0]
-            img_sample_size = num_of_img*(image_per/100)
+            img_sample_size = int(num_of_img*(image_per/100))
             img_sample = np.random.choice(image_list, img_sample_size, replace=False)
             transform = A.Compose(config[1])
             for img in img_sample:
                 img_read = cv2.imread('{}/{}'.format(self.img_dir, img))
                 img_transformed = transform(image=img_read)['image']
                 if self.keep_orig:
-                    cv2.imwrite(target_dir + img + '_{}.jpg'.format(name), img_transformed)
-                    cv2.imwrite(target_dir + img + '.jpg', img_read)
+                    cv2.imwrite(target_dir + img.split('.')[0] + '_{}.jpg'.format(name), img_transformed)
+                    cv2.imwrite(target_dir + img, img_read)
                 else:
-                    cv2.imwrite(target_dir + img + '.jpg', img_transformed)
+                    cv2.imwrite(target_dir + img, img_transformed)

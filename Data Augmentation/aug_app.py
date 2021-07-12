@@ -6,6 +6,7 @@ import aug
 
 # TODO:
 # replace Crop with RandomCropNearBBox or RandomSizedBBoxSafeCrop?
+# add sanity checks
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -77,7 +78,7 @@ class MainWindow(QMainWindow):
         self.default_checkbox = QtWidgets.QCheckBox(self)
         self.default_checkbox.setObjectName('default_checkbox')
         self.default_checkbox.setCheckState(False)
-        self.default_checkbox.stateChanged.connect(lambda: self.setDefault() if (self.default_checkbox.isChecked()) else self.unsetDefault())
+        self.default_checkbox.stateChanged.connect(lambda: self.setDefault() if self.default_checkbox.isChecked() else self.unsetDefault())
         self.default_checkbox.setGeometry(470, 178, 30, 30)
         # Keep original image label and checkbox
         self.orig_label = QtWidgets.QLabel(self)
@@ -128,39 +129,46 @@ class MainWindow(QMainWindow):
 
 
     def setDefault(self):
-        if self.pipeline_count != 0: # warning that all existing pipelines will be deletec
+        if self.pipeline_count != 0: # warning that all existing pipelines will be deleted
             default_warning = QtWidgets.QMessageBox(self)
             default_warning.setIcon(QtWidgets.QMessageBox.Warning)
             default_warning.setWindowTitle("Set default pipeline(s) warning")
             default_warning.setText("All existing pipelines will be deleted if you proceed and default pipelines will be added instead.")
             default_warning.setStandardButtons(QtWidgets.QMessageBox.Ok | QtWidgets.QMessageBox.Cancel)
             retval = default_warning.exec_()
-            if retval != QtWidgets.QMessageBox.Ok: return
-        
-        self.pipeline_layout.clear()
-        self.pipeline_count = 0
+            if retval == QtWidgets.QMessageBox.Ok:
+                self.pipeline_layout.clear()
+                self.pipeline_count = 0
+            else:
+                self.default_checkbox.blockSignals(True)
+                self.default_checkbox.setCheckState(False)
+                self.default_checkbox.blockSignals(False)
 
 
     def unsetDefault(self):
-        if self.pipeline_count != 0: # warning that all existing pipelines will be deletec
+        if self.pipeline_count != 0: # warning that all existing pipelines will be deleted
             default_warning = QtWidgets.QMessageBox(self)
             default_warning.setIcon(QtWidgets.QMessageBox.Warning)
             default_warning.setWindowTitle("Unset default pipeline(s) warning")
             default_warning.setText("Default pipelines and pipelines you may have added will be deleted if you proceed.")
             default_warning.setStandardButtons(QtWidgets.QMessageBox.Ok | QtWidgets.QMessageBox.Cancel)
             retval = default_warning.exec_()
-            if retval != QtWidgets.QMessageBox.Ok: return
-        
-        self.pipeline_layout.clear()
-        self.pipeline_count = 0
+            if retval == QtWidgets.QMessageBox.Ok:
+                self.pipeline_layout.clear()
+                self.pipeline_count = 0
+                self.default_checkbox.setCheckState(False) 
+            else:
+                self.default_checkbox.blockSignals(True)
+                self.default_checkbox.setCheckState(True)
+                self.default_checkbox.blockSignals(False)
 
 
     def showPipelineWindow(self):
         pipeline_name = self.pipeline_layout.currentItem().text()
-        self.pipeline_layout.itemDoubleClicked.connect(self.showPipelineWindow)
         self.pipeline_config_win = self.pipeline_window_dict[pipeline_name]
         self.pipeline_config_win.exec()
         self.pipeline_layout.currentItem().setText(self.pipeline_config_win.name)
+        self.pipeline_window_dict[self.pipeline_config_win.name] = self.pipeline_window_dict.pop(pipeline_name)
 
 
     def augmentImages(self):

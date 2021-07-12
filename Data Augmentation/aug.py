@@ -1,19 +1,23 @@
-from os import pipe
 import cv2
 import albumentations as A
-import argparse
+import os
 import os.path
-import aug_classes as ac
+import numpy as np
+import git
 
 # TODO:
 # experiment and find best values for the arguments
 # add support for bounding boxes
-# randomly sample images for data augmentation
+# what if percent does not give an integer number of images?
 
 class Augmentor():
-    def __init__(self, img_dir):
+    def __init__(self, img_dir, keep_orig):
         self.img_dir = img_dir
+        self.keep_orig = keep_orig
         self.pipelines = {}
+        git_repo = git.Repo(img_dir, search_parent_directories=True)
+        self.git_root = git_repo.git.rev_parse("--show-toplevel")
+
 
     def createPipeline(self, pipeline_name, pipeline_config):
         print('Creating pipeline \'{}\''.format(pipeline_name))
@@ -91,8 +95,28 @@ class Augmentor():
 
 
     def augment(self):
-        #     image_name = os.path.basename(image_path)
-        #     image_name = image_name.split(".")[0]
-        #     image_dir = os.path.dirname(image_path)]]
-        # img_name = dirname + '/{}_rgb.jpg'.format(name)
-        pass
+        print('Preparing to augment images.')
+        image_list = np.array([])
+
+        for file in os.listdir(self.img_dir): # load image names
+            file_ext = os.path.basename(file).split('.')[0]
+            if file_ext != 'jpg':
+                continue
+            image_list.append(file)
+        
+        num_of_img = image_list.size()
+        target_dir = '{}/Aug/'.format(self.git_root)
+
+        for name, config in self.pipelines.items():
+            image_per = config[0]
+            img_sample_size = num_of_img*(image_per/100)
+            img_sample = np.random.choice(image_list, img_sample_size, replace=False)
+            transform = A.Compose(config[1])
+            for img in img_sample:
+                img_read = cv2.imread('{}/{}'.format(self.img_dir, img))
+                img_transformed = transform(image=img_read)['image']
+                if self.keep_orig:
+                    cv2.imwrite(target_dir + img + '_{}.jpg'.format(name), img_transformed)
+                    cv2.imwrite(target_dir + img + '.jpg', img_read)
+                else:
+                    cv2.imwrite(target_dir + img + '.jpg', img_transformed)

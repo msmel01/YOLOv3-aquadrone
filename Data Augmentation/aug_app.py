@@ -4,6 +4,8 @@ import sys
 import aug_pipeline_win as ap
 import aug
 
+# TODO:
+# replace Crop with RandomCropNearBBox or RandomSizedBBoxSafeCrop?
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -13,6 +15,7 @@ class MainWindow(QMainWindow):
         self.setWindowFlags(QtCore.Qt.MSWindowsFixedSizeDialogHint)
         self.img_dir = './'
         self.pipeline_count = 0
+        self.keep_orig = True
         self.pipeline_window_dict = {}
         self.setupUi()
 
@@ -76,6 +79,14 @@ class MainWindow(QMainWindow):
         self.default_checkbox.setCheckState(False)
         self.default_checkbox.stateChanged.connect(lambda: self.setDefault() if (self.default_checkbox.isChecked()) else self.unsetDefault())
         self.default_checkbox.setGeometry(470, 178, 30, 30)
+        # Keep original image label and checkbox
+        self.orig_label = QtWidgets.QLabel(self)
+        self.orig_label.setText('Keep original image')
+        self.orig_label.setGeometry(500, 210, 170, 30)
+        self.orig_checkbox = QtWidgets.QCheckBox(self)
+        self.orig_checkbox.setCheckState(False)
+        self.orig_checkbox.stateChanged.connect(self.setKeepOrig)
+        self.orig_checkbox.setGeometry(470, 210, 30, 30)
         # add a pipeline
         self.add_pipeline_button = QtWidgets.QPushButton(self)
         self.add_pipeline_button.setGeometry(20, 150, 100, 30)
@@ -97,6 +108,10 @@ class MainWindow(QMainWindow):
         self.list_scroll_bar.setObjectName('list_scroll_bar')
         self.pipeline_layout.setVerticalScrollBar(self.list_scroll_bar)
         self.pipeline_layout.itemClicked.connect(self.pipelineSelected)
+
+
+    def setKeepOrig(self):
+        self.keep_orig = self.orig_checkbox.isChecked()
 
 
     def pipelineSelected(self):
@@ -150,16 +165,16 @@ class MainWindow(QMainWindow):
 
     def augmentImages(self):
         if self.pipeline_count == 0: return
-        augmenter = aug.Augmentor(self.img_dir)
+        augmenter = aug.Augmentor(self.img_dir, self.keep_orig)
+
         for name, pipeline in self.pipeline_window_dict.items():
             if pipeline.aug_oneh.count(True):
                 augmenter.createPipeline(name, pipeline)
-        try:
-            augmenter.augment()
-            print('Successfully augmented images.')
-            self.close()
-        except:
-            pass
+
+        augmenter.augment()
+        print('Successfully augmented images.')
+        self.close()
+        
 
     def addPipeline(self):
         self.pipeline_count += 1

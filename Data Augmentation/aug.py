@@ -6,7 +6,6 @@ import numpy as np
 import git
 
 # TODO:
-# experiment and find best values for the arguments
 # add support for bounding boxes
 # what if percent does not give an integer number of images?
 

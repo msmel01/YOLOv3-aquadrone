@@ -6,7 +6,6 @@ import numpy as np
 import git
 
 # TODO:
-# add support for bounding boxes
 # what if percent does not give an integer number of images?
 
 class Augmentor():
@@ -16,6 +15,21 @@ class Augmentor():
         self.pipelines = {}
         git_repo = git.Repo(img_dir, search_parent_directories=True)
         self.git_root = git_repo.git.rev_parse("--show-toplevel")
+        self.createClassDic()
+
+
+    def createClassDic(self):
+        classes_file = open(self.img_dir + '/classes.txt')
+        self.class_num_dict = {}
+        self.class_label_dict = {}
+        count = 0
+        for class_entry in classes_file:
+            class_entry = class_entry.strip()
+            self.class_num_dict[count] = class_entry
+            self.class_label_dict[class_entry] = count
+            count += 1
+
+        classes_file.close()
 
 
     def createPipeline(self, pipeline_name, pipeline_config):
@@ -93,6 +107,28 @@ class Augmentor():
         print('***************** Done creating {} *****************'.format(pipeline_name))
 
 
+    def getBoundingBoxes(self, file_name):
+        bbox_path = self.img_dir + '/' + file_name.split('.')[0] + '.txt'
+        bbox_file = open(bbox_path)
+        list_of_bboxes = []
+        for box in bbox_file:
+            bbox_list = []
+            bbox_x_center = box.split(' ')[1]
+            bbox_list.append(float(bbox_x_center))
+            bbox_y_center = box.split(' ')[2]
+            bbox_list.append(float(bbox_y_center))
+            bbox_width = box.split(' ')[3]
+            bbox_list.append(float(bbox_width))
+            bbox_height = box.split(' ')[4]
+            bbox_height = bbox_height.split()[0]
+            bbox_list.append(float(bbox_height))
+            bbox_list.append(self.class_num_dict[int(box.split(' ')[0])])
+            list_of_bboxes.append(bbox_list)
+
+        bbox_file.close()
+        return list_of_bboxes
+
+
     def augment(self):
         print('Preparing to augment images.')
         image_list = []
@@ -110,14 +146,30 @@ class Augmentor():
 
         for name, config in self.pipelines.items():
             image_per = config[0]
-            img_sample_size = int(num_of_img*(image_per/100))
+            img_sample_size = round(num_of_img*(image_per/100))
             img_sample = np.random.choice(image_list, img_sample_size, replace=False)
-            transform = A.Compose(config[1])
+            transform = A.Compose(config[1], bbox_params=A.BboxParams(format='yolo'))
             for img in img_sample:
                 img_read = cv2.imread('{}/{}'.format(self.img_dir, img))
-                img_transformed = transform(image=img_read)['image']
+                bounding_box = self.getBoundingBoxes(img) # 0 -> bboxes and 1 -> labels
+                transformed = transform(image=img_read, bboxes=bounding_box)
+                img_transformed = transformed['image']
+                bbox_transformed = transformed['bboxes']
                 if self.keep_orig:
                     cv2.imwrite(target_dir + img.split('.')[0] + '_{}.jpg'.format(name), img_transformed)
                     cv2.imwrite(target_dir + img, img_read)
+
                 else:
                     cv2.imwrite(target_dir + img, img_transformed)
+                
+                bbox_transformed_file = open(target_dir + img.split('.')[0]+'_{}.txt'.format(name), 'a')
+                for bbox_transformed_tuple in bbox_transformed:
+                    bbox_transformed_label = self.class_label_dict[bbox_transformed_tuple[4]]
+                    bbox_str = '{} {} {} {} {} \n'.format(bbox_transformed_label,
+                                                       bbox_transformed_tuple[0],
+                                                       bbox_transformed_tuple[1],
+                                                       bbox_transformed_tuple[2],
+                                                       bbox_transformed_tuple[3])
+                    bbox_transformed_file.write(bbox_str)
+
+                bbox_transformed_file.close()

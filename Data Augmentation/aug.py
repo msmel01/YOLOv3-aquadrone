@@ -151,7 +151,7 @@ class Augmentor():
             transform = A.Compose(config[1], bbox_params=A.BboxParams(format='yolo'))
             for img in img_sample:
                 img_read = cv2.imread('{}/{}'.format(self.img_dir, img))
-                bounding_box = self.getBoundingBoxes(img) # 0 -> bboxes and 1 -> labels
+                bounding_box = self.getBoundingBoxes(img)
                 transformed = transform(image=img_read, bboxes=bounding_box)
                 img_transformed = transformed['image']
                 bbox_transformed = transformed['bboxes']

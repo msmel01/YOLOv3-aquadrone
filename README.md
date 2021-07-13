@@ -1,9 +1,6 @@
 # Aquadrone YOLO Training
-## Setup
-### Repo setup for Windows
-The data augmentation app must be run on a Windows platform.
-To install required packages, use `pip install -r requirements.txt` in the root of the repo.
-### YOLO setup for Linux
+## YOLO setup for Linux
+The Darknet YOLO model must be trained on a Linux platform.
 * Install OpenCV from [here](https://docs.opencv.org/master/d7/d9f/tutorial_linux_install.html), following the **detailed process** steps.
 *  Install Darknet from [here](https://pjreddie.com/darknet/install/).
 * To compile with OpenCV, edit the `Makefile` by:
@@ -38,6 +35,9 @@ Before training, images must be annotated with the following information in a co
 * `height` is the height of the object.
 
 [Yolo_mark](https://github.com/AlexeyAB/Yolo_mark) and [LabelImg](https://github.com/tzutalin/labelImg) are two good options.
+## Repo setup for Windows
+The data augmentation app must be run on a Windows platform.
+To install required packages, use `pip install -r requirements.txt` in the root of the repo.
 ## Data augmentation
 A GUI has been made to facilitate the process of augmenting images. The [Albumentations](https://albumentations.ai/) library was used; demoes of data augmentation techniques can be found [here](https://albumentations-demo.herokuapp.com/).
 
@@ -50,4 +50,9 @@ The GUI supports the following data augmentation techniques:
 * Crop
 * Rgb Shift
 
-To run the app, navigate to the Data Augmentation folder and run `python aug_app.py`.
+To run the app, navigate to the Data Augmentation subdirectory and run `python aug_app.py`.
+## Data Division
+Data collected must be split into three subsets: training set (to train the model), validation set (to evaluate and tweak model and training process), and test set (to finally double check the model on the test set). The `divide_data.py` can help with automating the division of data.
+
+To run the script, use
+> `python divide_data.py  --directory <directory path to store image sets> --images <path to where all images and bounding boxes are stored> --test <percent of images to use in test set> --train <percent of images to use in training set> --valid <percent of images to use in the validation set>`
